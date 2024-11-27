@@ -22,7 +22,7 @@ class LearningSystem:
     """Learns from code quality patterns."""
     
     def __init__(self):
-        self.history_file = Path("monitor_data/learning_history.json")
+        self.history_file = Path("data/learning_history.json")
         self.history_file.parent.mkdir(exist_ok=True)
         self.patterns = {
             "successful_patterns": {},
