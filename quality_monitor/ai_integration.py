@@ -24,10 +24,9 @@ class IntegratedQualityChecker:
     async def check_code(self, code: str) -> Dict:
         """Run both standard and AI-powered checks on code."""
         results = {
-            "standard_issues": [],
-            "ai_issues": [],
-            "suggestions": [],
-            "score": 0
+            "score": 0,
+            "issues": [],
+            "suggestions": []
         }
         
         try:
@@ -35,22 +34,25 @@ class IntegratedQualityChecker:
             tree = ast.parse(code)
             
             # Run standard checks
-            all_issues = []
+            standard_issues = []
             for checker in self.standard_checker.checkers:
                 issues = checker.check(code, tree)
-                all_issues.extend(issues)
-            
-            results["standard_issues"] = all_issues
+                standard_issues.extend(issues)
             
             # Get AI analysis
             print(colored("\nRunning AI analysis...", "cyan"))
             ai_result = await self.ai_checker.analyze_code(code)
             
             if ai_result:
-                # Use AI results
-                results["score"] = ai_result["score"]
-                results["ai_issues"] = ai_result["issues"]
-                results["suggestions"] = ai_result["suggestions"]
+                # Combine all issues
+                all_issues = standard_issues + ai_result["issues"]
+                
+                # Update results
+                results.update({
+                    "score": ai_result["score"],
+                    "issues": all_issues,  # Include both standard and AI issues
+                    "suggestions": ai_result["suggestions"]
+                })
             
             return results
             
