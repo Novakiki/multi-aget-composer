@@ -122,19 +122,17 @@ def test_effectiveness_tracking(learning_system):
 
 def test_adaptation(learning_system):
     """Test system adaptation based on learning."""
-    # Add learning history
     learning_system.patterns["successful_patterns"].update({
         "pattern1": 10,
         "pattern2": 8
     })
     
-    # Trigger adaptation
     learning_system._adapt_thresholds()
     
-    # Verify adaptations
-    adjustments = learning_system.patterns["threshold_adjustments"]
+    # Check adjustments list
+    adjustments = learning_system.patterns["threshold_adjustments"]["adjustments"]
     assert len(adjustments) > 0
-    assert all(isinstance(v["confidence"], float) for v in adjustments.values())
+    assert all(isinstance(adj["confidence"], float) for adj in adjustments)
 
 if __name__ == "__main__":
     pytest.main([__file__]) 

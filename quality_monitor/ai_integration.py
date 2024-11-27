@@ -22,15 +22,7 @@ class IntegratedQualityChecker:
             raise
     
     async def check_code(self, code: str) -> Dict:
-        """
-        Run both standard and AI-powered checks on code.
-        
-        Args:
-            code: Source code to analyze
-            
-        Returns:
-            Combined analysis results
-        """
+        """Run both standard and AI-powered checks on code."""
         results = {
             "standard_issues": [],
             "ai_issues": [],
@@ -42,7 +34,7 @@ class IntegratedQualityChecker:
             # Parse code for standard checks
             tree = ast.parse(code)
             
-            # Run standard checks directly
+            # Run standard checks
             all_issues = []
             for checker in self.standard_checker.checkers:
                 issues = checker.check(code, tree)
@@ -55,16 +47,10 @@ class IntegratedQualityChecker:
             ai_result = await self.ai_checker.analyze_code(code)
             
             if ai_result:
-                # Parse AI results
-                ai_data = json.loads(ai_result)
-                results["ai_issues"] = ai_data.get("issues", [])
-                results["score"] = ai_data.get("score", 0)
-                
-                # Get enhanced suggestions
-                results["suggestions"] = self._enhance_suggestions(
-                    results["standard_issues"],
-                    results["ai_issues"]
-                )
+                # Use AI results
+                results["score"] = ai_result["score"]
+                results["ai_issues"] = ai_result["issues"]
+                results["suggestions"] = ai_result["suggestions"]
             
             return results
             

@@ -16,6 +16,7 @@ from config.quality_standards import (
     REQUIRED_SECTIONS,
     LEARNING_THRESHOLDS
 )
+from .checkers import StyleChecker, DocumentationChecker, ComplexityChecker
 
 class LearningSystem:
     """Learns from code quality patterns."""
@@ -55,12 +56,21 @@ class LearningSystem:
         try:
             # Extract meaningful code patterns
             lines = content.split('\n')
-            for i in range(len(lines)):
+            for i in range(len(lines) - 1):  # Look at pairs of lines
                 pattern = lines[i].strip()
+                next_pattern = lines[i + 1].strip()
+                
+                # Store individual patterns
                 if len(pattern) >= LEARNING_THRESHOLDS['pattern_min_length']:
                     self.patterns["successful_patterns"][pattern] = \
                         self.patterns["successful_patterns"].get(pattern, 0) + 1
-                        
+                
+                # Store pattern pairs (like try-except)
+                if pattern and next_pattern:
+                    pair = f"{pattern}\n{next_pattern}"
+                    self.patterns["successful_patterns"][pair] = \
+                        self.patterns["successful_patterns"].get(pair, 0) + 1
+                    
         except Exception as e:
             print(colored(f"Error updating patterns: {e}", "yellow"))
     
@@ -107,13 +117,62 @@ class LearningSystem:
         except Exception as e:
             print(colored(f"Error calculating confidence: {e}", "yellow"))
             return 0.0
+    
+    def _predict_potential_issues(self, code: str) -> List[Dict]:
+        """Predict potential issues based on learning history."""
+        try:
+            predictions = []
+            for pattern, count in self.patterns["issue_patterns"].items():
+                if count >= 3:  # Pattern occurs frequently
+                    issue_type, message = pattern.split(':', 1)
+                    predictions.append({
+                        "type": issue_type,
+                        "message": message,
+                        "confidence": count / max(len(self.patterns["issue_patterns"]), 1)
+                    })
+            return sorted(predictions, key=lambda x: x["confidence"], reverse=True)
+        except Exception as e:
+            print(colored(f"Error predicting issues: {e}", "yellow"))
+            return []
+    
+    def _calculate_pattern_confidence(self, frequency: int) -> float:
+        """Calculate confidence for a specific pattern."""
+        total = sum(self.patterns["successful_patterns"].values())
+        return frequency / max(total, 1)
+    
+    def _adapt_thresholds(self) -> None:
+        """Adapt quality thresholds based on learning."""
+        try:
+            confidence = self._calculate_learning_confidence()
+            self.patterns["threshold_adjustments"] = {
+                "adjustments": [  # List of adjustment objects
+                    {
+                        "confidence": confidence,
+                        "threshold": "max_line_length",
+                        "current": MAX_LINE_LENGTH,
+                        "suggested": MAX_LINE_LENGTH + (5 if confidence > 0.8 else 0)
+                    },
+                    {
+                        "confidence": confidence,
+                        "threshold": "min_docstring_words",
+                        "current": MIN_DOCSTRING_WORDS,
+                        "suggested": MIN_DOCSTRING_WORDS - (2 if confidence > 0.9 else 0)
+                    }
+                ]
+            }
+        except Exception as e:
+            print(colored(f"Error adapting thresholds: {e}", "yellow"))
 
 class QualityMonitor:
     """Main quality monitoring class."""
     
     def __init__(self):
         self.learning_system = LearningSystem()
-        self.checkers = []  # Will hold code checkers
+        self.checkers = [
+            StyleChecker(),
+            DocumentationChecker(),
+            ComplexityChecker()
+        ]
         self.issues: Dict[str, List[Dict]] = {}
         print(colored("Quality Monitor initialized", "green"))
     
@@ -148,3 +207,25 @@ class QualityMonitor:
             "functions": len([n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef)]),
             "classes": len([n for n in ast.walk(tree) if isinstance(n, ast.ClassDef)])
         }
+    
+    def generate_report(self) -> str:
+        """Generate a quality report."""
+        report = ["Code Quality Report", "=" * 20]
+        
+        # Summarize issues
+        for file_path, file_issues in self.issues.items():
+            report.append(f"\nFile: {file_path}")
+            if not file_issues:
+                report.append("✅ No issues found")
+            else:
+                for issue in file_issues:
+                    report.append(
+                        f"⚠️  {issue['type']}: {issue['message']}\n"
+                        f"   Suggestion: {issue['suggestion']}"
+                    )
+        
+        # Add learning insights
+        confidence = self.learning_system._calculate_learning_confidence()
+        report.append(f"\nLearning Confidence: {confidence:.2f}")
+        
+        return "\n".join(report)
