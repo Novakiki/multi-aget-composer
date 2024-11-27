@@ -1,0 +1,24 @@
+{
+  "successful_patterns": {},
+  "issue_patterns": {
+    "IMPORTANT:Documentation": 3,
+    "STYLE:Documentation": 3
+  },
+  "threshold_adjustments": {},
+  "effectiveness": {
+    "examples/sample_code.py": [
+      {
+        "timestamp": "2024-11-27T12:04:28.163924",
+        "issues_found": 6,
+        "stats": {
+          "lines_of_code": 21,
+          "functions": 3,
+          "classes": 1,
+          "docstrings": 2,
+          "comments": 2
+        },
+        "patterns_used": 0
+      }
+    ]
+  }
+}
