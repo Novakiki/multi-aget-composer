@@ -1,0 +1,5 @@
+termcolor
+watchdog
+pytest
+pytest-asyncio
+openai>=1.0.0
