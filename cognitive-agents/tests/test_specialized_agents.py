@@ -149,3 +149,168 @@ class TestEmotionalAnalysis:
         
         # Check transitions
         assert len(explorer.emotional_context['transitions']) == 2
+
+    @pytest.mark.parametrize("complex_emotion", [
+        "I'm happy but also nervous about this change",
+        "Part of me is excited, but I'm also scared",
+        "I feel proud yet humbled by this experience",
+        "I'm frustrated with the situation but hopeful things will improve",
+        "There's a mix of relief and anxiety as I move forward"
+    ])
+    async def test_complex_emotional_patterns(self, explorer, complex_emotion):
+        """Test recognition of complex, mixed emotional patterns."""
+        try:
+            explorer = await explorer
+            result = await explorer._explore_emotional_depth(complex_emotion)
+            
+            # Verify structure
+            assert isinstance(result, dict), "Should return dict"
+            assert 'primary_emotion' in result, "Should identify primary emotion"
+            assert 'secondary_emotions' in result, "Should identify secondary emotions"
+            assert 'emotional_context' in result, "Should provide context"
+            
+            # Verify complex emotion handling
+            assert len(result.get('secondary_emotions', [])) > 0, "Should identify secondary emotions"
+            assert result['emotional_context'].get('intensity') is not None, "Should assess emotional intensity"
+            
+            # Check context building
+            context_entry = explorer.emotional_context['history'][-1]
+            assert context_entry['thought'] == complex_emotion, "Should store original thought"
+            assert context_entry['analysis'] == result, "Should store full analysis"
+            
+            print(colored("\n🎭 Complex Emotion Analysis:", "blue"))
+            print(f"  Primary: {result.get('primary_emotion')}")
+            print(f"  Secondary: {', '.join(result.get('secondary_emotions', []))}")
+            print(f"  Context: {result['emotional_context'].get('situation')}")
+            
+        except Exception as e:
+            print(colored(f"Complex emotion test failed for: {complex_emotion}", "red"))
+            print(colored(f"Error: {str(e)}", "red"))
+            raise
+
+    async def test_emotional_journey(self, explorer):
+        """Test extended emotional progression and pattern recognition."""
+        try:
+            explorer = await explorer
+            journey = [
+                "Starting this new project, feeling optimistic but a bit nervous",
+                "Running into some unexpected challenges, getting frustrated",
+                "Made a small breakthrough, feeling slightly more hopeful",
+                "Still facing issues but learning from them now",
+                "Starting to see real progress, confidence growing",
+                "Looking back, feeling proud of how far we've come",
+                "Ready for the next phase, excited but mindful of lessons learned"
+            ]
+            
+            results = []
+            for thought in journey:
+                result = await explorer._explore_emotional_depth(thought)
+                results.append(result)
+                
+                print(colored(f"\n📝 Journey Entry:", "cyan"))
+                print(f"  Thought: {thought}")
+                print(colored("  Analysis:", "magenta"))
+                print(f"    Primary: {result.get('primary_emotion')}")
+                print(f"    Secondary: {', '.join(result.get('secondary_emotions', []))}")
+                print(f"    Context: {result['emotional_context'].get('situation')}")
+            
+            # Verify progression
+            assert len(explorer.emotional_context['history']) == len(journey), "Should track full journey"
+            assert len(explorer.emotional_context['transitions']) >= 3, "Should identify major transitions"
+            
+            # Check theme development
+            themes = explorer.emotional_context['themes']
+            assert len(themes) > 0, "Should identify emotional themes"
+            
+            print(colored("\n📊 Journey Analysis:", "green"))
+            print(f"  Transitions: {len(explorer.emotional_context['transitions'])}")
+            print(f"  Themes Tracked: {len(themes)}")
+            print("  Emotional Arc:")
+            for i, result in enumerate(results, 1):
+                print(f"    {i}. {result.get('primary_emotion')} → {', '.join(result.get('secondary_emotions', []))}")
+            
+        except Exception as e:
+            print(colored(f"Emotional journey test failed: {str(e)}", "red"))
+            raise
+
+@pytest.mark.asyncio
+class TestPatternCorrelation:
+    """Test pattern correlation capabilities."""
+    
+    @pytest.fixture
+    async def analyzer(self):
+        return PatternAnalyst()
+    
+    async def test_emotional_pattern_correlation(self, analyzer):
+        """Test recognition of recurring emotional patterns."""
+        try:
+            analyzer = await analyzer
+            
+            thought_sequence = [
+                "Feeling nervous about starting this project",
+                "Made some progress after pushing through the nerves",
+                "Another challenge, feeling that familiar nervousness",
+                "Breakthrough! The nervous energy helped me focus",
+                "Starting to see how my nervousness often leads to progress"
+            ]
+            
+            print(colored("\n🔄 Testing Pattern Correlation", "cyan"))
+            print("Processing thought sequence...")
+            
+            results = []
+            total_patterns = 0
+            for thought in thought_sequence:
+                result = await analyzer._find_new_patterns(thought)
+                results.append(result)
+                total_patterns += len(result)
+                
+                print(colored(f"\n📝 Entry:", "yellow"))
+                print(f"  Thought: {thought}")
+                print(f"  Patterns: {len(result)}")
+                
+                # Print actual patterns for debugging
+                for pattern in result:
+                    print(f"    • {pattern['category']}: {pattern['theme']} ({pattern['confidence']:.2f})")
+            
+            # Verify we're finding patterns
+            assert total_patterns > len(thought_sequence), "Should find multiple patterns"
+            assert len(analyzer.pattern_history) == total_patterns, "Should store all patterns"
+            
+            # Check for correlated patterns
+            correlations = await analyzer._analyze_pattern_correlations()
+            
+            print(colored("\n🎯 Pattern Correlations:", "green"))
+            for correlation in correlations:
+                print(f"  • {correlation['pattern']} → {correlation['outcome']}")
+                print(f"    Confidence: {correlation['confidence']:.2f}")
+            
+            # Verify correlations found
+            assert len(correlations) > 0, "Should identify pattern correlations"
+            assert any(c['confidence'] > 0.7 for c in correlations), "Should find high-confidence patterns"
+            
+            print(colored("\n📊 Pattern History:", "blue"))
+            for entry in analyzer.pattern_history:
+                print(f"  • {entry['category']}: {entry['theme']}")
+                print(f"    From: {entry['thought']}")
+            
+            # Check for correlated patterns
+            correlations = await analyzer._analyze_pattern_correlations()
+            
+            print(colored("\n🎯 Pattern Correlations:", "green"))
+            for correlation in correlations:
+                print(f"  • Pattern: {correlation['pattern']}")
+                print(f"    Leads to: {correlation['outcome']}")
+                print(f"    Evidence: {', '.join(correlation['evidence'])}")
+                print(f"    Confidence: {correlation['confidence']:.2f}")
+                print(f"    Occurrences: {correlation['occurrences']}")
+            
+            # Verify correlations found
+            assert len(correlations) > 0, "Should identify pattern correlations"
+            assert any(
+                'nervousness' in c['pattern'].lower() and 'progress' in c['outcome'].lower() 
+                for c in correlations
+            ), "Should identify nervousness-progress pattern"
+            
+        except Exception as e:
+            print(colored(f"Pattern correlation test failed: {str(e)}", "red"))
+            raise

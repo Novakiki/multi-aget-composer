@@ -95,10 +95,11 @@ class PatternAnalyst(CognitiveAgent):
             filtered_patterns = [p for p in patterns if p.get("confidence", 0) >= MIN_CONFIDENCE]
             print(colored(f"\nFound {len(filtered_patterns)} patterns", "cyan"))
             
-            # Store patterns in history
+            # Store patterns with thought context
             for pattern in filtered_patterns:
                 self.pattern_history.append({
                     **pattern,
+                    'thought': thought,  # Add the original thought
                     'timestamp': datetime.now().isoformat()
                 })
             
@@ -106,6 +107,79 @@ class PatternAnalyst(CognitiveAgent):
             
         except Exception as e:
             print(colored(f"Error in pattern finding: {str(e)}", "red"))
+            return []
+    
+    async def _analyze_pattern_correlations(self) -> List[Dict]:
+        """Analyze patterns to find correlations between emotions and outcomes."""
+        try:
+            # Enhanced correlation prompt
+            prompt = """As a Pattern Analyst, analyze this sequence of thoughts and patterns to identify recurring relationships.
+            
+            Focus especially on:
+            1. How nervousness relates to outcomes
+            2. Patterns of emotional states leading to achievements
+            3. Recurring behavioral sequences
+            
+            Look for specific evidence of:
+            - Emotional states preceding progress
+            - Behavioral adaptations that work
+            - Learning and growth patterns
+            
+            Return as JSON array of objects with format:
+            {
+                "correlations": [
+                    {
+                        "pattern": "clear description of recurring pattern",
+                        "outcome": "what typically follows this pattern",
+                        "evidence": ["specific example 1", "specific example 2"],
+                        "confidence": 0.0 to 1.0,
+                        "occurrences": number of times observed
+                    }
+                ]
+            }"""
+            
+            # Build richer context
+            history_entries = []
+            for i, entry in enumerate(self.pattern_history):
+                history_entries.append(
+                    f"Entry {i+1}:\n"
+                    f"Thought: {entry.get('thought', '')}\n"
+                    f"Pattern: {entry.get('theme', '')}\n"
+                    f"Category: {entry.get('category', '')}\n"
+                    f"Confidence: {entry.get('confidence', 0)}\n"
+                    f"---"
+                )
+            
+            history_text = "\n".join(history_entries)
+            
+            response = await self.ai.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=[{
+                    "role": "system",
+                    "content": prompt
+                }, {
+                    "role": "user",
+                    "content": f"Analyze these patterns:\n{history_text}"
+                }],
+                temperature=0.7,
+                response_format={"type": "json_object"}
+            )
+            
+            # Parse and filter correlations
+            result = json.loads(response.choices[0].message.content)
+            correlations = result.get('correlations', [])
+            
+            # Filter for high confidence and multiple occurrences
+            filtered_correlations = [
+                c for c in correlations 
+                if c.get('confidence', 0) >= 0.7 and c.get('occurrences', 0) >= 2
+            ]
+            
+            print(colored(f"\nFound {len(filtered_correlations)} strong correlations", "cyan"))
+            return filtered_correlations
+            
+        except Exception as e:
+            print(colored(f"Error analyzing correlations: {str(e)}", "red"))
             return []
 
 class EmotionalExplorer(CognitiveAgent):
