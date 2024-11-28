@@ -1,4 +1,1 @@
-config
-examples
-quality_monitor
-tests
+code_quality_tools

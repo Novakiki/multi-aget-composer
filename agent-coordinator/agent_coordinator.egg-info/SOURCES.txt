@@ -1,4 +1,3 @@
-README.md
 setup.py
 agent_coordinator.egg-info/PKG-INFO
 agent_coordinator.egg-info/SOURCES.txt

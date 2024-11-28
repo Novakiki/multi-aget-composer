@@ -1,12 +1,12 @@
-"""AI-enhanced quality monitoring."""
+"""AI integration for quality checking."""
 
 import ast
+import os
 from typing import Dict, List, Optional
 from termcolor import colored
-import json
 
-from .quality_monitor import QualityMonitor
-from config.ai_standards import AIQualityAnalyzer
+from . import QualityMonitor  # Import from same directory
+from ..config.ai_standards import AIQualityAnalyzer
 
 class IntegratedQualityChecker:
     """Combines traditional and AI-powered quality checks."""
@@ -45,13 +45,13 @@ class IntegratedQualityChecker:
             
             if ai_result:
                 # Combine all issues
-                all_issues = standard_issues + ai_result["issues"]
+                all_issues = standard_issues + ai_result.get("issues", [])
                 
                 # Update results
                 results.update({
-                    "score": ai_result["score"],
+                    "score": ai_result.get("score", 0),
                     "issues": all_issues,  # Include both standard and AI issues
-                    "suggestions": ai_result["suggestions"]
+                    "suggestions": ai_result.get("suggestions", [])
                 })
             
             return results

@@ -1,12 +1,6 @@
 Metadata-Version: 2.1
 Name: code-quality-tools
 Version: 0.1.0
-Summary: Agent-aware code quality monitoring system
-Author: Your Name
-Classifier: Development Status :: 4 - Beta
-Classifier: Intended Audience :: Developers
-Classifier: Topic :: Software Development :: Quality Assurance
-Classifier: Programming Language :: Python :: 3.8
 Requires-Python: >=3.8
 Requires-Dist: termcolor
 Requires-Dist: openai
