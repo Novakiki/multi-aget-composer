@@ -74,12 +74,14 @@ def format_insight(insight: dict, indent: int = 0) -> str:
     # Show integration metrics with clean formatting
     if 'meta_synthesis' in insight:
         meta = insight['meta_synthesis']
-        output.append(colored(f"\n{prefix}📊 Integration Metrics:", "blue"))
-        output.append(f"{prefix}  ╭{'─' * 40}╮")
-        output.append(f"{prefix}  │ Patterns Connected: {meta['patterns_connected']:<6}     │")
-        output.append(f"{prefix}  │ Cognitive Depth:    {meta['depth_reached']:<6}     │")
-        output.append(f"{prefix}  │ Integration Score:  {meta['integration_quality']:<6.2f}   │")
-        output.append(f"{prefix}  ╰{'─' * 40}╯")
+        output.append(colored(f"\n{prefix}📊 Consciousness Integration:", "blue"))
+        output.append(f"{prefix}  ╭{'─' * 50}╮")
+        output.append(f"{prefix}  │ Patterns Connected:  {meta['patterns_connected']:<6}        │")
+        output.append(f"{prefix}  │ Cognitive Depth:     {meta['depth_reached']:<6}        │")
+        output.append(f"{prefix}  │ Integration Score:   {meta['integration_quality']:<6.2f}      │")
+        output.append(f"{prefix}  │ Meta Coverage:       {meta.get('meta_coverage', 0):<6.2f}      │")
+        output.append(f"{prefix}  │ Emergence Quality:   {meta.get('emergence_quality', 0):<6.2f}      │")
+        output.append(f"{prefix}  ╰{'─' * 50}╯")
     
     # Show cognitive boundary
     output.append(f"\n{prefix}{'═' * (50 - len(prefix))}")
@@ -87,6 +89,39 @@ def format_insight(insight: dict, indent: int = 0) -> str:
     # Handle recursive exploration
     if 'sub_thoughts' in insight:
         output.append(format_insight(insight['sub_thoughts'], indent + 1))
+    
+    if 'belief_analysis' in insight:
+        beliefs = insight['belief_analysis']
+        output.append(colored(f"\n{prefix}🎯 Holding Space:", "magenta"))
+        
+        # Acknowledgment First
+        if 'acknowledgment' in beliefs:
+            ack = beliefs['acknowledgment']
+            output.append(colored(f"\n{prefix}  Present Experience:", "blue"))
+            output.append(f"{prefix}    • {ack.get('pain', '')}")
+            output.append(f"{prefix}    • {ack.get('grief', '')}")
+            output.append(f"{prefix}    • {ack.get('timing', '')}")
+        
+        # Core Beliefs (with gentler framing)
+        if 'core_beliefs' in beliefs:
+            output.append(colored(f"\n{prefix}  Current Truths:", "yellow"))
+            for belief in beliefs['core_beliefs']:
+                output.append(f"{prefix}    • {belief}")
+        
+        # Gentle Possibilities (only if present)
+        if 'gentle_possibilities' in beliefs:
+            output.append(colored(f"\n{prefix}  When/If Ready:", "cyan"))
+            for possibility in beliefs['gentle_possibilities']:
+                if 'current_truth' in possibility:
+                    output.append(f"{prefix}    Now: {possibility['current_truth']}")
+                if 'natural_process' in possibility:
+                    for process in possibility['natural_process']:
+                        output.append(f"{prefix}    ⟡ {process}")
+        
+        # Meta Reflection
+        if 'meta_reflection' in beliefs:
+            output.append(colored(f"\n{prefix}  🔮 Reflection:", "magenta"))
+            output.append(f"{prefix}    {beliefs['meta_reflection']}")
     
     return "\n".join(output)
 
@@ -97,7 +132,7 @@ async def main():
         primary = CognitiveAgent("Primary Observer")
         
         # Process a thought
-        thought = "I feel anxious about making changes in my life"
+        thought = "I experienced a difficult breakup that changed my life"
         print(colored(f"\n💭 Processing Thought: '{thought}'", "white"))
         
         result = await primary.process_thought(thought)

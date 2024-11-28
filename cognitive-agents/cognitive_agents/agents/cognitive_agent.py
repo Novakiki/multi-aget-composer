@@ -1,4 +1,4 @@
-"""Enhanced cognitive agent with self-referential capabilities."""
+"""Enhanced cognitive agent with belief analysis capabilities."""
 
 import asyncio
 from typing import Dict, List, Optional
@@ -16,10 +16,11 @@ class CognitiveAgent(RecursiveAgent):
         self.ai = AsyncOpenAI(api_key=os.getenv('OPENAI_API_KEY'))
         self.pattern_memory: List[Dict] = []
         self.context_history: List[Dict] = []
+        self.belief_patterns: List[Dict] = []  # Track belief patterns
         print(colored(f"Cognitive Agent '{role}' initialized at depth {depth}", "green"))
     
     async def process_thought(self, thought: str) -> Dict:
-        """Process thought with enhanced self-awareness."""
+        """Process thought with belief awareness."""
         try:
             print(colored(f"\n[{self.role} processing at depth {self.depth}]", "cyan"))
             
@@ -62,7 +63,8 @@ class CognitiveAgent(RecursiveAgent):
             if self.depth < self.max_depth and self._should_spawn_sub_agent(insights):
                 return await self._explore_deeper(thought, insights)
             
-            return {
+            # Get standard analysis
+            base_analysis = {
                 "thought": thought,
                 "insights": insights,
                 "patterns": patterns,
@@ -74,8 +76,19 @@ class CognitiveAgent(RecursiveAgent):
                 }
             }
             
+            # Add belief analysis
+            belief_insights = await self.analyze_belief_patterns(thought)
+            
+            # Integrate insights
+            integrated_analysis = self._integrate_belief_insights(
+                base_analysis, 
+                belief_insights
+            )
+            
+            return integrated_analysis
+            
         except Exception as e:
-            print(colored(f"Error in cognitive processing: {str(e)}", "red"))
+            print(colored(f"Error in thought processing: {str(e)}", "red"))
             return {"error": str(e)}
     
     def _build_context(self) -> str:
@@ -288,4 +301,74 @@ class CognitiveAgent(RecursiveAgent):
                 "depth_reached": self.depth,
                 "integration_quality": 0.0
             }
+    
+    async def analyze_belief_patterns(self, thought: str) -> Dict:
+        """Analyze belief patterns with deep compassion for grief and pain."""
+        try:
+            response = await self.ai.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=[{
+                    "role": "system",
+                    "content": f"""You are {self.role}, a deeply compassionate analyst who honors grief and pain.
+                    
+                    For the thought provided, create a response that:
+                    1. First acknowledges and validates the pain
+                    2. Holds space for grief without rushing to positivity
+                    3. Gently explores possible meaning when/if appropriate
+                    
+                    Return a JSON object with these fields:
+                    {{
+                        "core_beliefs": [
+                            "Honor the current emotional truth"
+                        ],
+                        "acknowledgment": {{
+                            "pain": "Validate the difficulty of the experience",
+                            "grief": "Honor the natural grieving process",
+                            "timing": "Respect that healing takes time"
+                        }},
+                        "gentle_possibilities": [
+                            {{
+                                "current_truth": "The present pain and difficulty",
+                                "natural_process": [
+                                    "What might emerge naturally",
+                                    "Without forcing positivity"
+                                ],
+                                "when_ready": "Possible perspectives to explore later",
+                                "integration": "How to hold both pain and possibility"
+                            }}
+                        ],
+                        "meta_reflection": "Compassionate insight about human experience"
+                    }}
+                    
+                    Focus on validating the current experience while holding gentle space for natural unfolding."""
+                }],
+                temperature=0.7,
+                response_format={"type": "json_object"}
+            )
+            
+            return json.loads(response.choices[0].message.content)
+            
+        except Exception as e:
+            print(colored(f"Error in belief analysis: {str(e)}", "red"))
+            return {}
+            
+    def _integrate_belief_insights(self, base: Dict, beliefs: Dict) -> Dict:
+        """Integrate belief insights with deep compassion."""
+        try:
+            return {
+                **base,
+                "belief_analysis": {
+                    "core_beliefs": beliefs.get('core_beliefs', []),
+                    "acknowledgment": beliefs.get('acknowledgment', {
+                        "pain": "This experience is deeply challenging",
+                        "grief": "Your feelings are valid and important",
+                        "timing": "Take the time you need"
+                    }),
+                    "gentle_possibilities": beliefs.get('gentle_possibilities', []),
+                    "meta_reflection": beliefs.get('meta_reflection', '')
+                }
+            }
+        except Exception as e:
+            print(colored(f"Error integrating beliefs: {str(e)}", "red"))
+            return base
   
