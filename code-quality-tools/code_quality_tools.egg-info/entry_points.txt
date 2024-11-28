@@ -1,0 +1,2 @@
+[console_scripts]
+quality-monitor = code_quality_tools.examples.monitor_usage:main

@@ -8,7 +8,11 @@ from termcolor import colored
 from watchdog.observers import Observer
 from ..quality_monitor import FileChangeHandler, QualityMonitor
 
-async def main():
+async def run():
+    """Main async function."""
+    # Set start time at beginning of run
+    run.start_time = time.time()
+    
     try:
         print(colored("\n🔍 Starting File Monitor", "cyan"))
         
@@ -45,7 +49,7 @@ def example():
         while True:
             await asyncio.sleep(1)
             # Simulate a file modification after 5 seconds
-            if not hasattr(main, "modified") and time.time() - main.start_time > 5:
+            if not hasattr(run, "modified") and time.time() - run.start_time > 5:
                 print(colored("\n📝 Modifying test file...", "cyan"))
                 with open(test_file, "a", encoding="utf-8") as f:
                     f.write("""
@@ -53,7 +57,7 @@ def another_function():
     \"\"\"Another test\"\"\"
     return True
                     """)
-                main.modified = True
+                run.modified = True
             
     except KeyboardInterrupt:
         print(colored("\n⏹️  Stopping monitor...", "yellow"))
@@ -68,6 +72,15 @@ def another_function():
         shutil.rmtree(watch_dir, ignore_errors=True)
         print(colored("\n✅ Monitor stopped and cleanup complete", "green"))
 
+def main():
+    """Entry point for the command line tool."""
+    try:
+        asyncio.run(run())
+    except KeyboardInterrupt:
+        print(colored("\n⏹️  Monitor stopped by user", "yellow"))
+    except Exception as e:
+        print(colored(f"\n❌ Error: {str(e)}", "red"))
+        sys.exit(1)
+
 if __name__ == "__main__":
-    main.start_time = time.time()
-    asyncio.run(main()) 
+    main() 
