@@ -1,0 +1,28 @@
+{
+  "original_thought": "I feel anxious about making changes in my life",
+  "perspective": "Primary Observer",
+  "insights": {
+    "analysis": "Feeling anxious about making changes in life is a common experience for many people. It can stem from a fear of the unknown, a fear of failure, or a discomfort with stepping out of one's comfort zone. It's important to acknowledge these feelings and understand that change can be challenging but also a necessary part of personal growth and development.",
+    "patterns": [
+      "Fear of the unknown",
+      "Fear of failure",
+      "Discomfort with stepping out of comfort zone",
+      "Anxiety about making changes"
+    ],
+    "meta_cognition": "It's important to recognize that change can be a source of anxiety for individuals, including myself. It's a reminder to approach change with compassion and understanding, both for myself and others who may be going through similar experiences.",
+    "implications": "The feeling of anxiety about making changes can provide an opportunity for introspection and growth. By exploring the root causes of this anxiety and addressing them, individuals can learn more about themselves and develop resilience in the face of uncertainty and change."
+  },
+  "sub_thoughts": {
+    "original_thought": "Exploring deeper implications of: I feel anxious about making changes in my life",
+    "perspective": "Primary Observer_sub_0",
+    "sub_thoughts": {
+      "original_thought": "Considering from Primary Observer_sub_0_sub_0's perspective: Exploring deeper implications of: I feel anxious about making changes in my life",
+      "perspective": "Primary Observer_sub_0_sub_0",
+      "sub_thoughts": {
+        "thought": "Considering from Primary Observer_sub_0_sub_0_sub_0's perspective: Considering from Primary Observer_sub_0_sub_0's perspective: Exploring deeper implications of: I feel anxious about making changes in my life",
+        "perspective": "Primary Observer_sub_0_sub_0_sub_0",
+        "depth": 3
+      }
+    }
+  }
+}

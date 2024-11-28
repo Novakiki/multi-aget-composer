@@ -1,0 +1,27 @@
+{
+  "original_thought": "I feel anxious about making changes in my life",
+  "perspective": "Primary Observer",
+  "insights": {
+    "analysis": "The feeling of anxiety about making changes in life is a common emotional response to uncertainty and the unknown. It may stem from fear of failure, fear of the unknown, or fear of stepping out of one's comfort zone.",
+    "patterns": [
+      "Anxiety about change",
+      "Fear of the unknown",
+      "Comfort zone"
+    ],
+    "meta_cognition": "Recognizing and acknowledging the source of anxiety is the first step towards addressing it. It's important to understand that change is a natural part of life and can lead to growth and new opportunities.",
+    "implications": "This anxiety can serve as a signal that you are venturing into unfamiliar territory, which can be an opportunity for personal growth and self-discovery. It's important to approach change with a mindset of curiosity and openness, embracing the potential for positive outcomes despite the discomfort it may initially bring."
+  },
+  "sub_thoughts": {
+    "original_thought": "Exploring deeper implications of: I feel anxious about making changes in my life",
+    "perspective": "Primary Observer_sub_0",
+    "sub_thoughts": {
+      "original_thought": "Considering from Primary Observer_sub_0_sub_0's perspective: Exploring deeper implications of: I feel anxious about making changes in my life",
+      "perspective": "Primary Observer_sub_0_sub_0",
+      "sub_thoughts": {
+        "thought": "Considering from Primary Observer_sub_0_sub_0_sub_0's perspective: Considering from Primary Observer_sub_0_sub_0's perspective: Exploring deeper implications of: I feel anxious about making changes in my life",
+        "perspective": "Primary Observer_sub_0_sub_0_sub_0",
+        "depth": 3
+      }
+    }
+  }
+}

@@ -1,0 +1,2 @@
+[console_scripts]
+cognitive-shell = cognitive_agents.examples.interactive:main

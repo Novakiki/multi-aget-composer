@@ -1,0 +1,29 @@
+{
+  "original_thought": "I feel anxious about making changes in my life",
+  "perspective": "Primary Observer",
+  "insights": {
+    "analysis": "The feeling of anxiety about making changes in life is common and often stems from fear of the unknown, fear of failure, or fear of losing comfort and familiarity. It may also indicate a lack of confidence in one's ability to adapt to new circumstances or handle potential challenges that come with change.",
+    "patterns": [
+      "anxiety",
+      "fear of the unknown",
+      "fear of failure",
+      "comfort zone",
+      "lack of confidence"
+    ],
+    "meta_cognition": "I noticed the presence of common emotional patterns such as anxiety and fear, which are often associated with uncertainty and self-doubt. The recognition of these patterns helps in understanding the underlying emotional state of the individual.",
+    "implications": "This feeling of anxiety can serve as a signal to pay attention to what specific aspects of change are causing distress. It can also be an opportunity for personal growth and self-discovery by facing these fears and gradually building confidence in navigating through life's transitions. Seeking support from friends, family, or a therapist can also be beneficial in managing these emotions and gaining a fresh perspective on the changes ahead."
+  },
+  "sub_thoughts": {
+    "original_thought": "Exploring deeper implications of: I feel anxious about making changes in my life",
+    "perspective": "Primary Observer_sub_0",
+    "sub_thoughts": {
+      "original_thought": "Considering from Primary Observer_sub_0_sub_0's perspective: Exploring deeper implications of: I feel anxious about making changes in my life",
+      "perspective": "Primary Observer_sub_0_sub_0",
+      "sub_thoughts": {
+        "thought": "Considering from Primary Observer_sub_0_sub_0_sub_0's perspective: Considering from Primary Observer_sub_0_sub_0's perspective: Exploring deeper implications of: I feel anxious about making changes in my life",
+        "perspective": "Primary Observer_sub_0_sub_0_sub_0",
+        "depth": 3
+      }
+    }
+  }
+}
