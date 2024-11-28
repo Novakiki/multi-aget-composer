@@ -1,0 +1,11 @@
+Metadata-Version: 2.1
+Name: agent-coordinator
+Version: 0.1.0
+Summary: Coordinated agent system for code quality monitoring
+Author: Novakiki
+Requires-Python: >=3.9
+Requires-Dist: watchdog
+Requires-Dist: termcolor
+Requires-Dist: typing-extensions
+Requires-Dist: pytest
+Requires-Dist: pytest-asyncio

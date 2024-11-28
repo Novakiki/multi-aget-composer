@@ -1,0 +1,6 @@
+watchdog
+termcolor
+typing-extensions
+pytest
+pytest-asyncio
+-e .

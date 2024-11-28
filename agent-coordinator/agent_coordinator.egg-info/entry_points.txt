@@ -1,0 +1,2 @@
+[console_scripts]
+agent-monitor = coordinator.agents.monitor.monitor_agent:main
