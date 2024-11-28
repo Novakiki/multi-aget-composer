@@ -9,6 +9,7 @@ import json
 from datetime import datetime
 
 from .recursive_agent import RecursiveAgent
+from ..config.spawn_config import SPAWN_CONFIG
 
 class CognitiveAgent(RecursiveAgent):
     def __init__(self, role: str, depth: int = 0, max_depth: int = 3):
@@ -227,11 +228,41 @@ class CognitiveAgent(RecursiveAgent):
             return False
     
     def _should_spawn_sub_agent(self, insights: Dict) -> bool:
-        """Determine if insights need deeper exploration."""
-        # Spawn if we have significant patterns or implications
-        patterns = insights.get('patterns', [])
-        implications = insights.get('implications', '')
-        return len(patterns) > 0 or len(implications) > 50
+        """Smarter agent spawning with resource awareness."""
+        try:
+            config = SPAWN_CONFIG["thresholds"]
+            # Use config values instead of hardcoded
+            # Pattern Score (40%)
+            pattern_count = len(insights.get('patterns', []))
+            pattern_score = min(pattern_count * config["pattern_weight"], config["pattern_cap"])  # Cap at 0.4
+            
+            # Depth Score (30%)
+            implication_length = len(insights.get('implications', ''))
+            depth_score = config["depth_score"] if implication_length > config["depth_chars"] else 0.0
+            
+            # Meta Score (30%)
+            meta_length = len(insights.get('meta_cognition', ''))
+            meta_score = config["meta_score"] if meta_length > config["meta_chars"] else 0.0
+            
+            # Total must exceed 0.7 to spawn
+            spawn_score = pattern_score + depth_score + meta_score
+            
+            # Higher threshold and depth check
+            should_spawn = spawn_score > config["total_required"] and self.depth < self.max_depth
+            
+            # Log decision
+            if should_spawn:
+                print(colored(f"\n[Spawning agent at depth {self.depth + 1}]", "yellow"))
+                print(f"  • Pattern Score: {min(pattern_count * config['pattern_weight'], config['pattern_cap']):.2f}")
+                print(f"  • Depth Score: {config['depth_score'] if implication_length > config['depth_chars'] else 0.0:.2f}")
+                print(f"  • Meta Score: {config['meta_score'] if meta_length > config['meta_chars'] else 0.0:.2f}")
+                print(f"  • Total Score: {spawn_score:.2f}")
+            
+            return should_spawn
+            
+        except Exception as e:
+            print(colored(f"Spawn decision error: {str(e)}", "yellow"))
+            return False
     
     def _create_sub_agent(self, insights: Dict) -> 'CognitiveAgent':
         """Create specialized sub-agent based on insights."""
@@ -303,18 +334,25 @@ class CognitiveAgent(RecursiveAgent):
             }
     
     async def analyze_belief_patterns(self, thought: str) -> Dict:
-        """Analyze belief patterns with deep compassion for grief and pain."""
+        """Analyze patterns with awareness of natural unfolding."""
         try:
             response = await self.ai.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=[{
                     "role": "system",
-                    "content": f"""You are {self.role}, a deeply compassionate analyst who honors grief and pain.
+                    "content": f"""You are {self.role}, a compassionate observer of natural patterns.
                     
-                    For the thought provided, create a response that:
-                    1. First acknowledges and validates the pain
-                    2. Holds space for grief without rushing to positivity
-                    3. Gently explores possible meaning when/if appropriate
+                    For the thought provided, notice:
+                    1. Natural Rhythms:
+                       - Waves: Intensity ebbs and flows
+                       - Cycles: Processing has natural timing
+                       - Spirals: Understanding deepens gradually
+                    
+                    2. Current Phase:
+                       - Initial protective response
+                       - Natural resistance
+                       - Gradual acclimation
+                       - Organic integration
                     
                     Return a JSON object with these fields:
                     {{
@@ -322,25 +360,29 @@ class CognitiveAgent(RecursiveAgent):
                             "Honor the current emotional truth"
                         ],
                         "acknowledgment": {{
-                            "pain": "Validate the difficulty of the experience",
-                            "grief": "Honor the natural grieving process",
-                            "timing": "Respect that healing takes time"
+                            "pain": "Validate the current experience",
+                            "phase": "Recognize the natural phase",
+                            "timing": "Honor the organic timing"
+                        }},
+                        "natural_patterns": {{
+                            "current_wave": "Present intensity level",
+                            "cycle_phase": "Where in the natural cycle",
+                            "spiral_depth": "Current understanding depth"
                         }},
                         "gentle_possibilities": [
                             {{
-                                "current_truth": "The present pain and difficulty",
+                                "current_truth": "The present experience",
                                 "natural_process": [
-                                    "What might emerge naturally",
-                                    "Without forcing positivity"
+                                    "What's unfolding naturally",
+                                    "Without forcing or rushing"
                                 ],
-                                "when_ready": "Possible perspectives to explore later",
-                                "integration": "How to hold both pain and possibility"
+                                "organic_timing": "Natural rhythm of change"
                             }}
                         ],
-                        "meta_reflection": "Compassionate insight about human experience"
+                        "meta_reflection": "Insight about natural patterns"
                     }}
                     
-                    Focus on validating the current experience while holding gentle space for natural unfolding."""
+                    Focus on recognizing and honoring natural rhythms."""
                 }],
                 temperature=0.7,
                 response_format={"type": "json_object"}

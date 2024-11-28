@@ -92,36 +92,37 @@ def format_insight(insight: dict, indent: int = 0) -> str:
     
     if 'belief_analysis' in insight:
         beliefs = insight['belief_analysis']
-        output.append(colored(f"\n{prefix}🎯 Holding Space:", "magenta"))
+        output.append(colored(f"\n{prefix}🎯 Natural Unfolding:", "magenta"))
         
-        # Acknowledgment First
+        # Natural Patterns
+        if 'natural_patterns' in beliefs:
+            patterns = beliefs['natural_patterns']
+            output.append(colored(f"\n{prefix}  Wave Patterns:", "cyan"))
+            output.append(f"{prefix}    ≈ Current: {patterns.get('current_wave', '')}")
+            
+            output.append(colored(f"\n{prefix}  Cycle Phase:", "yellow"))
+            output.append(f"{prefix}    ○ {patterns.get('cycle_phase', '')}")
+            
+            output.append(colored(f"\n{prefix}  Spiral Depth:", "blue"))
+            output.append(f"{prefix}    ⟳ {patterns.get('spiral_depth', '')}")
+        
+        # Acknowledgment with timing
         if 'acknowledgment' in beliefs:
             ack = beliefs['acknowledgment']
-            output.append(colored(f"\n{prefix}  Present Experience:", "blue"))
-            output.append(f"{prefix}    • {ack.get('pain', '')}")
-            output.append(f"{prefix}    • {ack.get('grief', '')}")
-            output.append(f"{prefix}    • {ack.get('timing', '')}")
+            output.append(colored(f"\n{prefix}  Present Experience:", "magenta"))
+            output.append(f"{prefix}    • Now: {ack.get('pain', '')}")
+            output.append(f"{prefix}    • Phase: {ack.get('phase', '')}")
+            output.append(f"{prefix}    • Timing: {ack.get('timing', '')}")
         
-        # Core Beliefs (with gentler framing)
-        if 'core_beliefs' in beliefs:
-            output.append(colored(f"\n{prefix}  Current Truths:", "yellow"))
-            for belief in beliefs['core_beliefs']:
-                output.append(f"{prefix}    • {belief}")
-        
-        # Gentle Possibilities (only if present)
+        # Gentle Process
         if 'gentle_possibilities' in beliefs:
-            output.append(colored(f"\n{prefix}  When/If Ready:", "cyan"))
+            output.append(colored(f"\n{prefix}  Natural Process:", "green"))
             for possibility in beliefs['gentle_possibilities']:
-                if 'current_truth' in possibility:
-                    output.append(f"{prefix}    Now: {possibility['current_truth']}")
                 if 'natural_process' in possibility:
                     for process in possibility['natural_process']:
                         output.append(f"{prefix}    ⟡ {process}")
-        
-        # Meta Reflection
-        if 'meta_reflection' in beliefs:
-            output.append(colored(f"\n{prefix}  🔮 Reflection:", "magenta"))
-            output.append(f"{prefix}    {beliefs['meta_reflection']}")
+                if 'organic_timing' in possibility:
+                    output.append(f"{prefix}    ⟲ {possibility['organic_timing']}")
     
     return "\n".join(output)
 
@@ -132,7 +133,7 @@ async def main():
         primary = CognitiveAgent("Primary Observer")
         
         # Process a thought
-        thought = "I experienced a difficult breakup that changed my life"
+        thought = "I moved to a new country alone and feel completely lost and overwhelmed"
         print(colored(f"\n💭 Processing Thought: '{thought}'", "white"))
         
         result = await primary.process_thought(thought)
