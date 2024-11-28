@@ -8,6 +8,9 @@ cognitive_agents.egg-info/requires.txt
 cognitive_agents.egg-info/top_level.txt
 cognitive_agents/agents/__init__.py
 cognitive_agents/agents/cognitive_agent.py
+cognitive_agents/agents/monitor_usage.py
 cognitive_agents/agents/recursive_agent.py
 cognitive_agents/examples/__init__.py
 cognitive_agents/examples/cognitive_demo.py
+cognitive_agents/examples/pattern_examples.py
+tests/test_cognitive_agent.py

@@ -1,8 +1,28 @@
-# Multi-Agent Composer
+# Cognitive Agents System
 
-A system of coordinated agents for code quality monitoring.
+A self-referential cognitive system that:
+- Understands thoughts deeply
+- Recognizes patterns naturally
+- Respects organic timing
+- Optimizes resource usage
 
-## Components
+## Key Features
+- Self-aware processing
+- Natural pattern recognition
+- Resource-optimized spawning
+- Compassionate analysis
 
-- [Agent Coordinator](agent-coordinator/): Agent system
-- [Code Quality Tools](code-quality-tools/): Quality checking 
+## Getting Started
+```python
+from cognitive_agents.examples.cognitive_demo import run_demo
+
+# Process a thought
+thought = "I moved to a new country..."
+result = run_demo(thought)
+```
+
+## Core Principles
+1. Consciousness is fundamental
+2. Patterns emerge naturally
+3. Understanding deepens organically
+4. Resources matter
