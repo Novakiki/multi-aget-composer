@@ -1,8 +1,7 @@
 Metadata-Version: 2.1
 Name: cognitive-agents
 Version: 0.1.0
-Summary: Recursive cognitive agent system for mental health
-Requires-Python: >=3.8
+Requires-Dist: click
 Requires-Dist: termcolor
 Requires-Dist: openai
 Requires-Dist: pytest

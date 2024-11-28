@@ -1,5 +1,6 @@
 setup.py
 cognitive_agents/__init__.py
+cognitive_agents/cli.py
 cognitive_agents.egg-info/PKG-INFO
 cognitive_agents.egg-info/SOURCES.txt
 cognitive_agents.egg-info/dependency_links.txt
@@ -10,7 +11,11 @@ cognitive_agents/agents/__init__.py
 cognitive_agents/agents/cognitive_agent.py
 cognitive_agents/agents/monitor_usage.py
 cognitive_agents/agents/recursive_agent.py
+cognitive_agents/agents/specialized_agents.py
 cognitive_agents/examples/__init__.py
 cognitive_agents/examples/cognitive_demo.py
 cognitive_agents/examples/pattern_examples.py
+tests/test_cli_integration.py
+tests/test_cli_timeouts.py
 tests/test_cognitive_agent.py
+tests/test_specialized_agents.py

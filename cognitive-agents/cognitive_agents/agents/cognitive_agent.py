@@ -18,16 +18,24 @@ class CognitiveAgent(RecursiveAgent):
         self.pattern_memory: List[Dict] = []
         self.context_history: List[Dict] = []
         self.belief_patterns: List[Dict] = []  # Track belief patterns
+        self.current_result = None  # Add this
         print(colored(f"Cognitive Agent '{role}' initialized at depth {depth}", "green"))
     
     async def process_thought(self, thought: str) -> Dict:
         """Process thought with belief awareness."""
         try:
+            self.thought = thought
             print(colored(f"\n[{self.role} processing at depth {self.depth}]", "cyan"))
             
             # Build rich context
             context = self._build_context()
             patterns = self._recognize_patterns(thought)
+            
+            print(colored(f"\n📊 Processing details:", "yellow"))
+            print(f"  Role: {self.role}")
+            print(f"  Depth: {self.depth}")
+            print(f"  Context size: {len(self.context_history)}")
+            print(f"  Known patterns: {len(self.pattern_memory)}")
             
             # Enhanced AI analysis with self-reference
             response = await self.ai.chat.completions.create(
@@ -41,10 +49,23 @@ class CognitiveAgent(RecursiveAgent):
                     Analyze this thought deeply and return a JSON object with EXACTLY these fields:
                     {{
                         "analysis": "Your main insights about the thought",
-                        "patterns": ["List of patterns you recognize"],
+                        "patterns": [
+                            "List patterns at different levels:",
+                            "- Surface patterns (obvious themes)",
+                            "- Emotional patterns (feelings, reactions)",
+                            "- Behavioral patterns (actions, responses)",
+                            "- Contextual patterns (situation, environment)",
+                            "- Meta patterns (patterns about patterns)"
+                        ],
                         "meta_cognition": "Your reflection on your own analysis process",
                         "implications": "Deeper meaning and connections you see"
                     }}
+                    
+                    Important:
+                    - Honor simplicity when present
+                    - Don't force complexity
+                    - Let patterns emerge naturally
+                    - Be thorough but not excessive
                     
                     Be specific, insightful, and self-aware in your analysis."""
                 }, {
@@ -86,7 +107,23 @@ class CognitiveAgent(RecursiveAgent):
                 belief_insights
             )
             
-            return integrated_analysis
+            # Store result for status checks - ADD DEBUG HERE
+            self.current_result = {
+                "insights": {
+                    "integrated_understanding": {
+                        "patterns": insights.get('patterns', []),
+                        "analysis": insights.get('analysis', ''),
+                        "meta_cognition": insights.get('meta_cognition', '')
+                    }
+                }
+            }
+            
+            print(colored("\n🔄 Integration result:", "green"))
+            print(f"  Patterns: {len(insights.get('patterns', []))}")
+            print(f"  Analysis: {bool(insights.get('analysis'))}")
+            print(f"  Meta: {bool(insights.get('meta_cognition'))}")
+            
+            return self.current_result
             
         except Exception as e:
             print(colored(f"Error in thought processing: {str(e)}", "red"))
@@ -228,13 +265,32 @@ class CognitiveAgent(RecursiveAgent):
             return False
     
     def _should_spawn_sub_agent(self, insights: Dict) -> bool:
-        """Smarter agent spawning with resource awareness."""
+        """Smarter agent spawning with resource awareness and simplicity respect."""
         try:
+            # First, respect simplicity
+            thought_length = len(self.thought.strip())
+            words = len(self.thought.strip().split())
+            
+            # Log the simplicity check
+            print(colored(f"\n📏 Simplicity Check:", "cyan"))
+            print(f"  • Length: {thought_length} chars")
+            print(f"  • Words: {words}")
+            
+            # More realistic simplicity thresholds
+            if thought_length < 20 or words < 5:
+                print(colored("  • Honoring simplicity - no spawning needed", "green"))
+                return False
+            
+            # Also check for simple emotional statements
+            simple_emotions = {"happy", "sad", "angry", "tired", "ok", "good", "bad"}
+            if any(word in self.thought.lower() for word in simple_emotions) and words < 6:
+                print(colored("  • Simple emotional expression - no spawning needed", "green"))
+                return False
+            
+            # Rest of existing spawn logic...
             config = SPAWN_CONFIG["thresholds"]
-            # Use config values instead of hardcoded
-            # Pattern Score (40%)
             pattern_count = len(insights.get('patterns', []))
-            pattern_score = min(pattern_count * config["pattern_weight"], config["pattern_cap"])  # Cap at 0.4
+            pattern_score = min(pattern_count * config["pattern_weight"], config["pattern_cap"])
             
             # Depth Score (30%)
             implication_length = len(insights.get('implications', ''))
@@ -413,4 +469,37 @@ class CognitiveAgent(RecursiveAgent):
         except Exception as e:
             print(colored(f"Error integrating beliefs: {str(e)}", "red"))
             return base
+    
+    async def check_integration_status(self) -> Dict:
+        """Check current integration status."""
+        return self.current_result  # Need to track this
+    
+class AdaptiveTimeout:
+    def __init__(self):
+        self.timeout_history = []
+        self.MAX_HISTORY = 50  # Reduced from 100
+        
+    def calculate_timeout(self, thought: str, has_previous_patterns: bool) -> int:
+        """Calculate adaptive timeout based on complexity."""
+        try:
+            # Simple base timeout
+            base_timeout = 10  # Base: 10 seconds
+            
+            # Basic complexity factors
+            if len(thought.split()) > 15:  # Length
+                base_timeout += 2
+                
+            if has_previous_patterns:  # Context
+                base_timeout += 3
+                
+            # Update history
+            self.timeout_history.append(base_timeout)
+            if len(self.timeout_history) > self.MAX_HISTORY:
+                self.timeout_history.pop(0)
+                
+            return base_timeout
+            
+        except Exception as e:
+            print(colored(f"Timeout calculation error: {str(e)}", "red"))
+            return 10  # Default safe timeout
   
