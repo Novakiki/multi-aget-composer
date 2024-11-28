@@ -6,7 +6,15 @@ from cognitive_agents.agents.specialized_agents import (
     EmotionalExplorer,
     IntegrationSynthesizer
 )
+from cognitive_agents.visualization.pattern_viz import PatternVisualizer
 from termcolor import colored
+
+@pytest.fixture(autouse=True)
+async def cleanup_db():
+    """Clean up database before each test."""
+    store = PatternStore()
+    store.cleanup()
+    yield
 
 @pytest.mark.asyncio
 async def test_agent_collaboration():
@@ -313,4 +321,82 @@ class TestPatternCorrelation:
             
         except Exception as e:
             print(colored(f"Pattern correlation test failed: {str(e)}", "red"))
+            raise
+
+@pytest.mark.asyncio
+class TestPatternAdaptability:
+    """Test how well patterns adapt to different emotional contexts."""
+    
+    @pytest.fixture
+    async def analyzer(self):
+        return PatternAnalyst()
+    
+    async def test_different_emotional_sequences(self, analyzer):
+        """Test pattern recognition across different emotional sequences."""
+        try:
+            analyzer = await analyzer
+            visualizer = PatternVisualizer()
+            
+            sequences = {
+                "confidence": [
+                    "I'm really unsure about starting this project",
+                    "Starting to understand it better now",
+                    "Finally feeling confident about where this is going"
+                ],
+                "frustration": [
+                    "Nothing is working right in this project",
+                    "Keep running into the same problems",
+                    "Found a way through the issues finally"
+                ],
+                "excitement": [
+                    "Can't wait to begin this new project",
+                    "Making incredible progress already",
+                    "This turned out even better than I hoped"
+                ]
+            }
+            
+            for emotion_type, sequence in sequences.items():
+                # Reset state before each sequence
+                analyzer.reset_state()
+                
+                print(colored(f"\n🔄 Testing {emotion_type.title()} Sequence", "cyan"))
+                
+                # Process thoughts...
+                for thought in sequence:
+                    result = await analyzer._find_new_patterns(thought)
+                    print(colored(f"\n📝 Entry:", "yellow"))
+                    print(f"  Thought: {thought}")
+                    print(f"  Patterns: {len(result)}")
+                    for pattern in result:
+                        print(f"    • {pattern['category']}: {pattern['theme']} ({pattern['confidence']:.2f})")
+                
+                # Get analysis results
+                analysis_result = await analyzer._analyze_pattern_correlations()
+                
+                # Show correlations
+                print(colored(f"\n🎯 {emotion_type.title()} Correlations:", "green"))
+                for correlation in analysis_result['correlations']:
+                    print(f"  • Pattern: {correlation['pattern']}")
+                    print(f"    Leads to: {correlation['outcome']}")
+                    print(f"    Evidence: {', '.join(correlation['evidence'])}")
+                    print(f"    Confidence: {correlation['confidence']:.2f}")
+                
+                # Show summary ONCE at the end
+                if 'summary' in analysis_result:
+                    print(colored("\n📊 Final Pattern Summary:", "blue"))
+                    total = sum(analysis_result['summary'].values())
+                    for category, count in analysis_result['summary'].items():
+                        if count > 0:
+                            percentage = (count / total) * 100
+                            print(f"  {category.title()}: {count} ({percentage:.1f}%)")
+                
+                # Verify results
+                assert len(analysis_result['correlations']) > 0, f"Should find patterns in {emotion_type} sequence"
+                assert any(
+                    emotion_type.lower() in c['pattern'].lower() or
+                    emotion_type.lower() in c['outcome'].lower()
+                    for c in analysis_result['correlations']
+                ), f"Should identify {emotion_type}-related patterns"
+        except Exception as e:
+            print(colored(f"Adaptability test failed: {str(e)}", "red"))
             raise

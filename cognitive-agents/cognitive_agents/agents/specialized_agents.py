@@ -1,16 +1,43 @@
 """Specialized cognitive agents with distinct capabilities."""
-from typing import Dict, List, Set
+from typing import Dict, List, Set, Optional
 from datetime import datetime
 from termcolor import colored
 import json
 
 from .cognitive_agent import CognitiveAgent
+from ..visualization.pattern_viz import PatternVisualizer
+from ..pattern_store.db import PatternStore
+from ..config import PATTERN_SETTINGS
+
+class PatternError(Exception):
+    """Base class for pattern-related errors."""
+    pass
+
+class PatternDetectionError(PatternError):
+    """Error during pattern detection."""
+    pass
+
+class PatternValidationError(PatternError):
+    """Error during pattern validation."""
+    pass
+
+class PatternStorageError(PatternError):
+    """Error during pattern storage."""
+    pass
 
 class PatternAnalyst(CognitiveAgent):
     """Tracks and evolves pattern understanding over time."""
     def __init__(self):
         super().__init__("Pattern Analyst", depth=1)
+        self.reset_state()
+        self.store = PatternStore()
+        
+    def reset_state(self):
+        """Reset agent state between sequences."""
         self.pattern_history = []
+        self.current_sequence = []
+        self.current_sequence_id = None
+        self.visualizer = PatternVisualizer()
         
     def _analyze_pattern_history(self) -> List[Dict]:
         """Find patterns that evolve over time."""
@@ -31,156 +58,256 @@ class PatternAnalyst(CognitiveAgent):
         return patterns_by_theme
     
     async def _find_new_patterns(self, thought: str) -> List[Dict]:
-        """Identify new patterns in current thought."""
+        """Identify new patterns in current thought with error recovery."""
+        partial_patterns = []  # Keep track of any successful patterns
+        
         try:
-            MIN_CONFIDENCE = 0.7
+            # Input validation
+            if not thought or len(thought.strip()) < 2:
+                raise PatternValidationError("Thought too short or empty")
             
-            # Check for minimal input first
-            if len(thought.strip()) <= 4:  # "Fine", "Ok", etc
-                minimal_pattern = {
-                    "category": "surface",
-                    "theme": "minimal response",
-                    "confidence": 1.0
-                }
-                
-                # Store in history
-                self.pattern_history.append({
-                    **minimal_pattern,
-                    'timestamp': datetime.now().isoformat()
-                })
-                
-                print(colored(f"\nFound minimal input pattern", "cyan"))
-                return [minimal_pattern]
+            # Minimal input handling with specific error
+            if len(thought.strip()) <= 4:
+                try:
+                    return self._handle_minimal_input(thought)
+                except Exception as e:
+                    raise PatternDetectionError(f"Minimal input handling failed: {str(e)}")
             
-            system_prompt = """As a Pattern Analyst, identify patterns in this thought.
-            Priority Order:
-            1. Surface Patterns (obvious themes)
-            2. Emotional Patterns (feelings, reactions)
-            3. Behavioral Patterns (actions, responses)
+            # Main pattern detection
+            try:
+                patterns = await self._detect_patterns(thought)
+                partial_patterns.extend(patterns)  # Save successful patterns
+            except Exception as e:
+                raise PatternDetectionError(f"Pattern detection failed: {str(e)}")
             
-            Important:
-            - Respect input complexity (don't over-analyze simple inputs)
-            - Only return high-confidence patterns (>= 0.7)
-            - For very simple inputs (1-2 words), always use "surface" category
+            # Store patterns with error handling
+            try:
+                stored_patterns = await self._store_patterns(partial_patterns, thought)
+                return stored_patterns
+            except Exception as e:
+                raise PatternStorageError(f"Pattern storage failed: {str(e)}")
             
-            Return as JSON array of objects with format:
-            {
-                "patterns": [
-                    {
-                        "category": "surface|emotional|behavioral",
-                        "theme": "pattern theme",
-                        "confidence": 0.0 to 1.0
-                    }
-                ]
-            }"""
+        except PatternValidationError as e:
+            print(colored(f"⚠️ Validation Error: {str(e)}", "yellow"))
+            return self._handle_minimal_input(thought)  # Fallback to minimal
             
-            response = await self.ai.chat.completions.create(
-                model="gpt-3.5-turbo",
-                messages=[{
-                    "role": "system",
-                    "content": system_prompt
-                }, {
-                    "role": "user",
-                    "content": thought
-                }],
-                temperature=0.7,
-                response_format={"type": "json_object"}
-            )
+        except PatternDetectionError as e:
+            print(colored(f"❌ Detection Error: {str(e)}", "red"))
+            if partial_patterns:  # Return any patterns we found before error
+                print(colored(f"↺ Recovered {len(partial_patterns)} patterns", "green"))
+                return partial_patterns
+            return self._handle_minimal_input(thought)  # Fallback if nothing found
             
-            # Parse response properly
-            result = json.loads(response.choices[0].message.content)
-            patterns = result.get('patterns', [])
-            
-            # Filter and log
-            filtered_patterns = [p for p in patterns if p.get("confidence", 0) >= MIN_CONFIDENCE]
-            print(colored(f"\nFound {len(filtered_patterns)} patterns", "cyan"))
-            
-            # Store patterns with thought context
-            for pattern in filtered_patterns:
-                self.pattern_history.append({
-                    **pattern,
-                    'thought': thought,  # Add the original thought
-                    'timestamp': datetime.now().isoformat()
-                })
-            
-            return filtered_patterns
+        except PatternStorageError as e:
+            print(colored(f"💾 Storage Error: {str(e)}", "red"))
+            return partial_patterns  # Return patterns even if storage failed
             
         except Exception as e:
-            print(colored(f"Error in pattern finding: {str(e)}", "red"))
+            print(colored(f"⚠️ Unexpected error in pattern finding: {str(e)}", "red"))
+            if partial_patterns:
+                return partial_patterns
             return []
     
-    async def _analyze_pattern_correlations(self) -> List[Dict]:
-        """Analyze patterns to find correlations between emotions and outcomes."""
+    async def _analyze_pattern_correlations(self) -> Dict:
+        """Analyze patterns with sequence context."""
         try:
-            # Enhanced correlation prompt
-            prompt = """As a Pattern Analyst, analyze this sequence of thoughts and patterns to identify recurring relationships.
+            # Track pattern types for summary
+            pattern_summary = {
+                'emotional': 0,
+                'behavioral': 0,
+                'surface': 0,
+                'meta': 0  # Add meta category
+            }
             
-            Focus especially on:
-            1. How nervousness relates to outcomes
-            2. Patterns of emotional states leading to achievements
-            3. Recurring behavioral sequences
+            # Count patterns once at the start
+            for entry in self.current_sequence:
+                for pattern in entry['patterns']:
+                    pattern_summary[pattern['category']] += 1
             
-            Look for specific evidence of:
-            - Emotional states preceding progress
-            - Behavioral adaptations that work
-            - Learning and growth patterns
+            # Show summary once, with percentages
+            total_patterns = sum(pattern_summary.values())
+            if total_patterns > 0:
+                print(colored("\n📊 Pattern Summary:", "blue"))
+                for category, count in pattern_summary.items():
+                    if count > 0:
+                        percentage = (count / total_patterns) * 100
+                        print(f"  {category.title()}: {count} ({percentage:.1f}%)")
             
-            Return as JSON array of objects with format:
-            {
-                "correlations": [
-                    {
-                        "pattern": "clear description of recurring pattern",
-                        "outcome": "what typically follows this pattern",
-                        "evidence": ["specific example 1", "specific example 2"],
-                        "confidence": 0.0 to 1.0,
-                        "occurrences": number of times observed
-                    }
-                ]
-            }"""
+            # Build transitions from sequence
+            transitions = []
             
-            # Build richer context
-            history_entries = []
-            for i, entry in enumerate(self.pattern_history):
-                history_entries.append(
-                    f"Entry {i+1}:\n"
-                    f"Thought: {entry.get('thought', '')}\n"
-                    f"Pattern: {entry.get('theme', '')}\n"
-                    f"Category: {entry.get('category', '')}\n"
-                    f"Confidence: {entry.get('confidence', 0)}\n"
-                    f"---"
-                )
+            # Rest of the existing correlation code...
+            for i in range(len(self.current_sequence)-1):
+                current = self.current_sequence[i]
+                next_step = self.current_sequence[i+1]
+                
+                # Get patterns from each step
+                current_pattern = current['patterns'][0]
+                next_pattern = next_step['patterns'][0]
+                
+                # Create transition correlation
+                transition = {
+                    'pattern': current_pattern['theme'],
+                    'outcome': next_pattern['theme'],
+                    'evidence': [
+                        f"From: {current['thought']}",
+                        f"To: {next_step['thought']}"
+                    ],
+                    'confidence': min(current_pattern['confidence'], 
+                                    next_pattern['confidence']),
+                    'occurrences': 1  # Each transition counts as one
+                }
+                transitions.append(transition)
             
-            history_text = "\n".join(history_entries)
-            
-            response = await self.ai.chat.completions.create(
-                model="gpt-3.5-turbo",
-                messages=[{
-                    "role": "system",
-                    "content": prompt
-                }, {
-                    "role": "user",
-                    "content": f"Analyze these patterns:\n{history_text}"
-                }],
-                temperature=0.7,
-                response_format={"type": "json_object"}
-            )
-            
-            # Parse and filter correlations
-            result = json.loads(response.choices[0].message.content)
-            correlations = result.get('correlations', [])
-            
-            # Filter for high confidence and multiple occurrences
+            # Filter for high confidence
             filtered_correlations = [
-                c for c in correlations 
-                if c.get('confidence', 0) >= 0.7 and c.get('occurrences', 0) >= 2
+                t for t in transitions 
+                if t['confidence'] >= 0.7  # Keep confidence threshold
             ]
             
-            print(colored(f"\nFound {len(filtered_correlations)} strong correlations", "cyan"))
-            return filtered_correlations
+            print(colored(f"\nFound {len(filtered_correlations)} transitions", "cyan"))
+            
+            # Return both correlations and summary
+            return {
+                'correlations': filtered_correlations,
+                'summary': pattern_summary
+            }
             
         except Exception as e:
             print(colored(f"Error analyzing correlations: {str(e)}", "red"))
-            return []
+            return {
+                'correlations': [],
+                'summary': {}
+            }
+    
+    def _detect_sequence_type(self, thought: str) -> str:
+        """Detect sequence type from thought content."""
+        thought_lower = thought.lower()
+        
+        for seq_type, keywords in PATTERN_SETTINGS['SEQUENCE_TYPES'].items():
+            if any(keyword in thought_lower for keyword in keywords):
+                return seq_type
+            
+        return "emotional"  # default
+    
+    def _handle_minimal_input(self, thought: str) -> List[Dict]:
+        """Handle minimal input with basic pattern detection."""
+        minimal_pattern = {
+            "category": "surface",
+            "theme": "minimal response",
+            "confidence": 1.0,
+            "timestamp": datetime.now().isoformat(),
+            "thought": thought
+        }
+        
+        # Store in history
+        self.pattern_history.append(minimal_pattern)
+        print(colored(f"\nHandled minimal input", "cyan"))
+        return [minimal_pattern]
+    
+    async def _detect_patterns(self, thought: str) -> List[Dict]:
+        """Core pattern detection logic."""
+        MIN_CONFIDENCE = PATTERN_SETTINGS['MIN_CONFIDENCE']
+        
+        system_prompt = """As a Pattern Analyst, identify organic patterns in thoughts.
+
+Core Principles:
+1. Natural Emergence
+   - Let patterns surface naturally from the content
+   - Identify emotional states and transitions
+   - Recognize behavioral patterns
+   - Track progression over time
+
+2. Pattern Types:
+   • Emotional: Feelings, reactions, states (e.g., uncertainty → confidence)
+   • Behavioral: Actions, responses (e.g., hesitation → action)
+   • Surface: Observable statements, facts
+   • Meta: Pattern evolution and connections
+
+3. Pattern Validation
+   - Each pattern must have clear evidence
+   - Assign confidence based on clarity (0.7-1.0)
+   - Look for recurring themes and transitions
+
+4. Sequence Awareness
+   - Track emotional progression
+   - Note behavioral changes
+   - Identify transition points
+
+Return as JSON:
+{
+    "patterns": [
+        {
+            "category": "emotional|behavioral|surface|meta",
+            "theme": "specific pattern description",
+            "confidence": 0.0 to 1.0,
+            "evidence": ["supporting detail"],
+            "sequence_context": "how this fits in progression"
+        }
+    ]
+}"""
+        
+        response = await self.ai.chat.completions.create(
+            model="gpt-4o-mini-2024-07-18",
+            messages=[{
+                "role": "system",
+                "content": system_prompt
+            }, {
+                "role": "user",
+                "content": thought
+            }],
+            temperature=0.7,
+            response_format={"type": "json_object"}
+        )
+        
+        result = json.loads(response.choices[0].message.content)
+        patterns = result.get('patterns', [])
+        
+        # Filter and validate
+        filtered_patterns = [
+            p for p in patterns 
+            if p.get("confidence", 0) >= MIN_CONFIDENCE
+        ]
+        
+        print(colored(f"\nDetected {len(filtered_patterns)} patterns", "cyan"))
+        return filtered_patterns
+    
+    async def _store_patterns(self, patterns: List[Dict], thought: str) -> List[Dict]:
+        """Store patterns with proper error handling."""
+        stored_patterns = []
+        
+        # Initialize sequence if needed
+        if not self.current_sequence_id:
+            sequence_type = self._detect_sequence_type(thought)
+            self.current_sequence_id = self.store.create_sequence(sequence_type)
+        
+        # Store each pattern
+        for pattern in patterns:
+            try:
+                # Add metadata
+                pattern['timestamp'] = datetime.now().isoformat()
+                pattern['thought'] = thought
+                
+                # Store in database
+                pattern_id = self.store.store_pattern(
+                    pattern,
+                    self.current_sequence_id
+                )
+                pattern['id'] = pattern_id
+                
+                # Add to sequence
+                self.current_sequence.append({
+                    'thought': thought,
+                    'patterns': [pattern]
+                })
+                
+                stored_patterns.append(pattern)
+                
+            except Exception as e:
+                print(colored(f"Failed to store pattern: {str(e)}", "yellow"))
+                continue
+        
+        return stored_patterns
 
 class EmotionalExplorer(CognitiveAgent):
     """Builds emotional context and understanding over time."""
@@ -196,7 +323,7 @@ class EmotionalExplorer(CognitiveAgent):
         """Explore emotional layers of the thought."""
         try:
             response = await self.ai.chat.completions.create(
-                model="gpt-3.5-turbo",
+                model="gpt-4o-mini-2024-07-18",
                 messages=[{
                     "role": "system",
                     "content": """As an Emotional Explorer, analyze the emotional layers in this thought.
@@ -386,7 +513,7 @@ class IntegrationSynthesizer(CognitiveAgent):
             Return a JSON object with this meta-understanding."""
             
             response = await self.ai.chat.completions.create(
-                model="gpt-3.5-turbo",
+                model="gpt-4o-mini-2024-07-18",
                 messages=[{
                     "role": "system",
                     "content": prompt
