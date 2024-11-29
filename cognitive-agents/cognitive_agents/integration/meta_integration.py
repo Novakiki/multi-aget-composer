@@ -11,6 +11,7 @@ class MetaIntegration:
         self.questions = questions
         self.community = community
         self.meta = MetaLearning()
+        self.evolution_history = []  # Track evolution progression
         
     async def integrate_meta_learning(self, interaction: Dict) -> Dict:
         """Let meta-learning emerge naturally."""
@@ -215,15 +216,15 @@ class MetaIntegration:
         """Allow natural evolution of patterns and insights."""
         try:
             # Calculate evolution metrics
-            connection_strength = len(connections) / 5.0  # Normalize
-            emergence_strength = len(emergence) / 3.0     # Normalize
+            connection_strength = len(connections) / 5.0
+            emergence_strength = len(emergence) / 3.0
             
             # Calculate theme coverage
             themes = set()
             for e in emergence:
                 if isinstance(e.get('theme'), str):
                     themes.add(e['theme'])
-            theme_coverage = len(themes) / 4.0  # Normalize by expected themes
+            theme_coverage = len(themes) / 4.0
             
             # Calculate depth progression
             depths = []
@@ -234,25 +235,55 @@ class MetaIntegration:
                 ])
             avg_depth = sum(depths) / len(depths) if depths else 0
             
-            # Determine evolution stage
-            if connection_strength > 0.8 and emergence_strength > 0.8 and theme_coverage > 0.8:
-                stage = 'evolving'
-            elif connection_strength > 0.6 and emergence_strength > 0.6 and avg_depth > 0.7:
-                stage = 'established'
-            elif connection_strength > 0.4 or (emergence_strength > 0.5 and theme_coverage > 0.5):
-                stage = 'developing'
-            elif connection_strength > 0.2 or emergence_strength > 0.3:
-                stage = 'connecting'
+            # Record current state
+            current_state = {
+                'timestamp': datetime.now().isoformat(),
+                'metrics': {
+                    'connection_strength': connection_strength,
+                    'emergence_strength': emergence_strength,
+                    'theme_coverage': theme_coverage,
+                    'depth': avg_depth
+                },
+                'themes': list(themes),
+                'pattern_count': len(connections)
+            }
+            
+            # Determine stage with history context
+            if len(self.evolution_history) == 0:
+                stage = 'emerging'  # Always start at emerging
             else:
-                stage = 'emerging'
+                prev_state = self.evolution_history[-1]
+                # Boost scores if showing consistent growth
+                if current_state['metrics']['depth'] > prev_state['metrics']['depth']:
+                    avg_depth *= 1.1
+                if len(current_state['themes']) > len(prev_state['themes']):
+                    theme_coverage *= 1.1
                 
-            # Log evolution components
-            print(colored("\n🌱 Evolution Components:", "cyan"))
-            print(f"  • Connection Strength: {connection_strength:.2f}")
-            print(f"  • Emergence Strength: {emergence_strength:.2f}")
-            print(f"  • Theme Coverage: {theme_coverage:.2f}")
-            print(f"  • Average Depth: {avg_depth:.2f}")
-            print(f"  • Evolution Stage: {stage}")
+                # Progressive stages
+                if connection_strength > 0.8 and emergence_strength > 0.8 and theme_coverage > 0.8:
+                    stage = 'evolving'
+                elif connection_strength > 0.6 and emergence_strength > 0.6 and avg_depth > 0.7:
+                    stage = 'established'
+                elif connection_strength > 0.4 or (emergence_strength > 0.5 and theme_coverage > 0.5):
+                    stage = 'developing'
+                elif connection_strength > 0.2 or emergence_strength > 0.3:
+                    stage = 'connecting'
+                else:
+                    stage = 'emerging'
+                
+            # Update state with stage
+            current_state['stage'] = stage
+            self.evolution_history.append(current_state)
+            
+            # Analyze progression
+            progression = self._analyze_evolution_progression()
+            
+            # Enhanced logging
+            print(colored("\n📈 Evolution History:", "cyan"))
+            print(f"  • History Length: {len(self.evolution_history)}")
+            print(f"  • Stage Changes: {progression['stage_changes']}")
+            print(f"  • Growth Rate: {progression['growth_rate']:.2f}")
+            print(f"  • Trend: {progression['trend']}")
             
             return {
                 'stage': stage,
@@ -260,11 +291,9 @@ class MetaIntegration:
                 'emergence_strength': emergence_strength,
                 'theme_coverage': theme_coverage,
                 'depth': avg_depth,
-                'patterns': [
-                    pattern for e in emergence 
-                    for pattern in e.get('patterns', [])
-                ],
-                'themes': list(themes)
+                'patterns': [p for e in emergence for p in e.get('patterns', [])],
+                'themes': list(themes),
+                'progression': progression
             }
             
         except Exception as e:
@@ -276,7 +305,12 @@ class MetaIntegration:
                 'theme_coverage': 0,
                 'depth': 0,
                 'patterns': [],
-                'themes': []
+                'themes': [],
+                'progression': {
+                    'stage_changes': 0,
+                    'growth_rate': 0.0,
+                    'trend': 'error'
+                }
             }
         
     def _calculate_integration_quality(self, connections: List[Dict], emergence: List[Dict]) -> float:
@@ -400,3 +434,57 @@ class MetaIntegration:
         except Exception as e:
             print(colored(f"❌ Pattern depth calculation error: {str(e)}", "red"))
             return 0.0
+        
+    def _analyze_evolution_progression(self) -> Dict:
+        """Analyze how evolution has progressed over time."""
+        try:
+            if not self.evolution_history:
+                return {
+                    'stage_changes': 0,
+                    'growth_rate': 0.0,
+                    'trend': 'initial'
+                }
+            
+            # Count stage changes
+            stage_changes = sum(
+                1 for i in range(1, len(self.evolution_history))
+                if self.evolution_history[i]['stage'] != self.evolution_history[i-1]['stage']
+            )
+            
+            # Calculate growth rate from metrics
+            if len(self.evolution_history) >= 2:
+                current = self.evolution_history[-1]['metrics']
+                previous = self.evolution_history[-2]['metrics']
+                
+                # Compare key metrics
+                growth_factors = [
+                    (current['connection_strength'] - previous['connection_strength']),
+                    (current['emergence_strength'] - previous['emergence_strength']),
+                    (current['theme_coverage'] - previous['theme_coverage']),
+                    (current['depth'] - previous['depth'])
+                ]
+                growth_rate = sum(growth_factors) / len(growth_factors)
+            else:
+                growth_rate = 0.0
+                
+            # Determine trend
+            if growth_rate > 0.1:
+                trend = 'accelerating'
+            elif growth_rate < -0.1:
+                trend = 'consolidating'
+            else:
+                trend = 'stable'
+                
+            return {
+                'stage_changes': stage_changes,
+                'growth_rate': growth_rate,
+                'trend': trend
+            }
+            
+        except Exception as e:
+            print(colored(f"❌ Progression analysis error: {str(e)}", "red"))
+            return {
+                'stage_changes': 0,
+                'growth_rate': 0.0,
+                'trend': 'error'
+            }
