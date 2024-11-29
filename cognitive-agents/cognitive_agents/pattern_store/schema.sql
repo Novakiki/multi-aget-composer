@@ -1,52 +1,57 @@
--- Pattern evolution tracking
-CREATE TABLE IF NOT EXISTS pattern_evolution (
-    id INTEGER PRIMARY KEY,
-    pattern_id INTEGER,
-    from_version INTEGER,
-    to_version INTEGER,
-    change_type TEXT,  -- 'refinement', 'merge', 'split'
-    change_description TEXT,
-    timestamp TEXT,
-    FOREIGN KEY (pattern_id) REFERENCES patterns(id)
-);
+-- Pattern Storage Schema
 
--- Pattern relationships
-CREATE TABLE IF NOT EXISTS pattern_relationships (
-    id INTEGER PRIMARY KEY,
-    pattern_id1 INTEGER,
-    pattern_id2 INTEGER,
-    relationship_type TEXT,  -- 'similar', 'opposite', 'causes', 'results_from'
-    strength REAL,
-    FOREIGN KEY (pattern_id1) REFERENCES patterns(id),
-    FOREIGN KEY (pattern_id2) REFERENCES patterns(id)
-);
-
--- Sequences and patterns
+-- Sequences table to track emotional sequences
 CREATE TABLE IF NOT EXISTS sequences (
-    id TEXT PRIMARY KEY,
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     type TEXT NOT NULL,  -- confidence, frustration, excitement
-    created_at TEXT NOT NULL
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+-- Patterns table for storing detected patterns
 CREATE TABLE IF NOT EXISTS patterns (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    sequence_id TEXT NOT NULL,
-    category TEXT NOT NULL,
+    sequence_id INTEGER,
+    category TEXT NOT NULL,  -- emotional, behavioral, surface, meta
     theme TEXT NOT NULL,
     confidence REAL NOT NULL,
-    timestamp TEXT NOT NULL,
+    timestamp TIMESTAMP NOT NULL,
     thought TEXT NOT NULL,
     FOREIGN KEY (sequence_id) REFERENCES sequences(id)
 );
 
-CREATE TABLE IF NOT EXISTS correlations (
+-- New tables for pattern caching and recovery
+CREATE TABLE IF NOT EXISTS pattern_cache (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    sequence_id TEXT NOT NULL,
-    from_pattern_id INTEGER,
-    to_pattern_id INTEGER,
-    confidence REAL NOT NULL,
-    evidence TEXT NOT NULL,
-    FOREIGN KEY (sequence_id) REFERENCES sequences(id),
-    FOREIGN KEY (from_pattern_id) REFERENCES patterns(id),
-    FOREIGN KEY (to_pattern_id) REFERENCES patterns(id)
-); 
+    thought_hash TEXT NOT NULL,        -- Hash of the thought text
+    thought_text TEXT NOT NULL,        -- Original thought
+    patterns_json TEXT NOT NULL,       -- Stored as JSON
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    last_used_at TEXT NOT NULL DEFAULT (datetime('now')),
+    use_count INTEGER DEFAULT 0,
+    UNIQUE(thought_hash)               -- For quick lookups
+);
+
+-- Add cache metrics table
+CREATE TABLE IF NOT EXISTS cache_metrics (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    timestamp TEXT NOT NULL DEFAULT (datetime('now')),
+    total_entries INTEGER NOT NULL,
+    total_hits INTEGER NOT NULL,
+    avg_hits REAL NOT NULL,
+    avg_age_days REAL NOT NULL
+);
+
+-- Create indices for better performance
+CREATE INDEX IF NOT EXISTS idx_patterns_sequence 
+ON patterns(sequence_id);
+
+CREATE INDEX IF NOT EXISTS idx_patterns_category 
+ON patterns(category);
+
+-- Index for pattern similarity searches
+CREATE INDEX IF NOT EXISTS idx_patterns_theme 
+ON patterns(theme);
+
+CREATE INDEX IF NOT EXISTS idx_pattern_cache_thought 
+ON pattern_cache(thought_text);
+  

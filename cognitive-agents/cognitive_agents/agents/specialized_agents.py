@@ -7,7 +7,7 @@ import json
 from .cognitive_agent import CognitiveAgent
 from ..visualization.pattern_viz import PatternVisualizer
 from ..pattern_store.db import PatternStore
-from ..config import PATTERN_SETTINGS
+from ..config import PATTERN_SETTINGS, CACHE_SETTINGS
 
 class PatternError(Exception):
     """Base class for pattern-related errors."""
@@ -29,15 +29,16 @@ class PatternAnalyst(CognitiveAgent):
     """Tracks and evolves pattern understanding over time."""
     def __init__(self):
         super().__init__("Pattern Analyst", depth=1)
-        self.reset_state()
         self.store = PatternStore()
+        self.reset_state()
         
     def reset_state(self):
-        """Reset agent state between sequences."""
+        """Reset agent state between sequences while preserving cache."""
         self.pattern_history = []
         self.current_sequence = []
         self.current_sequence_id = None
         self.visualizer = PatternVisualizer()
+        self.store.cleanup_sequences()
         
     def _analyze_pattern_history(self) -> List[Dict]:
         """Find patterns that evolve over time."""
@@ -59,33 +60,37 @@ class PatternAnalyst(CognitiveAgent):
     
     async def _find_new_patterns(self, thought: str) -> List[Dict]:
         """Identify new patterns in current thought with error recovery."""
-        partial_patterns = []  # Keep track of any successful patterns
+        stored_patterns = []
         
         try:
-            # Input validation
-            if not thought or len(thought.strip()) < 2:
-                raise PatternValidationError("Thought too short or empty")
+            # Initialize sequence first
+            if not self.current_sequence_id:
+                sequence_type = self._detect_sequence_type(thought)
+                self.current_sequence_id = self.store.create_sequence(sequence_type)
+                print(colored(f"\nCreated new sequence: {sequence_type} (ID: {self.current_sequence_id})", "blue"))
             
-            # Minimal input handling with specific error
-            if len(thought.strip()) <= 4:
+            # Detect patterns
+            patterns = await self._detect_patterns(thought)
+            
+            # Store each pattern
+            for pattern in patterns:
                 try:
-                    return self._handle_minimal_input(thought)
+                    pattern['timestamp'] = datetime.now().isoformat()
+                    pattern['thought'] = thought
+                    pattern_id = self.store.store_pattern(pattern, self.current_sequence_id)
+                    pattern['id'] = pattern_id
+                    
+                    # Add to sequence
+                    self.current_sequence.append({
+                        'thought': thought,
+                        'patterns': [pattern]
+                    })
+                    stored_patterns.append(pattern)
+                    
                 except Exception as e:
-                    raise PatternDetectionError(f"Minimal input handling failed: {str(e)}")
+                    print(colored(f"Failed to store pattern: {str(e)}", "yellow"))
             
-            # Main pattern detection
-            try:
-                patterns = await self._detect_patterns(thought)
-                partial_patterns.extend(patterns)  # Save successful patterns
-            except Exception as e:
-                raise PatternDetectionError(f"Pattern detection failed: {str(e)}")
-            
-            # Store patterns with error handling
-            try:
-                stored_patterns = await self._store_patterns(partial_patterns, thought)
-                return stored_patterns
-            except Exception as e:
-                raise PatternStorageError(f"Pattern storage failed: {str(e)}")
+            return stored_patterns
             
         except PatternValidationError as e:
             print(colored(f"⚠️ Validation Error: {str(e)}", "yellow"))
@@ -93,19 +98,19 @@ class PatternAnalyst(CognitiveAgent):
             
         except PatternDetectionError as e:
             print(colored(f"❌ Detection Error: {str(e)}", "red"))
-            if partial_patterns:  # Return any patterns we found before error
-                print(colored(f"↺ Recovered {len(partial_patterns)} patterns", "green"))
-                return partial_patterns
+            if stored_patterns:  # Return any patterns we found before error
+                print(colored(f"↺ Recovered {len(stored_patterns)} patterns", "green"))
+                return stored_patterns
             return self._handle_minimal_input(thought)  # Fallback if nothing found
             
         except PatternStorageError as e:
             print(colored(f"💾 Storage Error: {str(e)}", "red"))
-            return partial_patterns  # Return patterns even if storage failed
+            return stored_patterns  # Return patterns even if storage failed
             
         except Exception as e:
             print(colored(f"⚠️ Unexpected error in pattern finding: {str(e)}", "red"))
-            if partial_patterns:
-                return partial_patterns
+            if stored_patterns:
+                return stored_patterns
             return []
     
     async def _analyze_pattern_correlations(self) -> Dict:
@@ -116,58 +121,49 @@ class PatternAnalyst(CognitiveAgent):
                 'emotional': 0,
                 'behavioral': 0,
                 'surface': 0,
-                'meta': 0  # Add meta category
+                'meta': 0
             }
             
             # Count patterns once at the start
             for entry in self.current_sequence:
                 for pattern in entry['patterns']:
-                    pattern_summary[pattern['category']] += 1
-            
-            # Show summary once, with percentages
-            total_patterns = sum(pattern_summary.values())
-            if total_patterns > 0:
-                print(colored("\n📊 Pattern Summary:", "blue"))
-                for category, count in pattern_summary.items():
-                    if count > 0:
-                        percentage = (count / total_patterns) * 100
-                        print(f"  {category.title()}: {count} ({percentage:.1f}%)")
+                    category = pattern.get('category', 'unknown')
+                    if category in pattern_summary:
+                        pattern_summary[category] += 1
             
             # Build transitions from sequence
             transitions = []
-            
-            # Rest of the existing correlation code...
             for i in range(len(self.current_sequence)-1):
                 current = self.current_sequence[i]
                 next_step = self.current_sequence[i+1]
                 
                 # Get patterns from each step
-                current_pattern = current['patterns'][0]
-                next_pattern = next_step['patterns'][0]
-                
-                # Create transition correlation
-                transition = {
-                    'pattern': current_pattern['theme'],
-                    'outcome': next_pattern['theme'],
-                    'evidence': [
-                        f"From: {current['thought']}",
-                        f"To: {next_step['thought']}"
-                    ],
-                    'confidence': min(current_pattern['confidence'], 
-                                    next_pattern['confidence']),
-                    'occurrences': 1  # Each transition counts as one
-                }
-                transitions.append(transition)
+                try:
+                    for current_pattern in current['patterns']:
+                        for next_pattern in next_step['patterns']:
+                            transition = {
+                                'pattern': current_pattern['theme'],
+                                'outcome': next_pattern['theme'],
+                                'evidence': [
+                                    f"From: {current['thought']}",
+                                    f"To: {next_step['thought']}"
+                                ],
+                                'confidence': min(
+                                    current_pattern['confidence'], 
+                                    next_pattern['confidence']
+                                )
+                            }
+                            transitions.append(transition)
+                except (KeyError, IndexError) as e:
+                    print(colored(f"⚠️ Skipping invalid pattern: {str(e)}", "yellow"))
+                    continue
             
             # Filter for high confidence
             filtered_correlations = [
                 t for t in transitions 
-                if t['confidence'] >= 0.7  # Keep confidence threshold
+                if t['confidence'] >= PATTERN_SETTINGS['MIN_CONFIDENCE']
             ]
             
-            print(colored(f"\nFound {len(filtered_correlations)} transitions", "cyan"))
-            
-            # Return both correlations and summary
             return {
                 'correlations': filtered_correlations,
                 'summary': pattern_summary
@@ -206,9 +202,96 @@ class PatternAnalyst(CognitiveAgent):
         return [minimal_pattern]
     
     async def _detect_patterns(self, thought: str) -> List[Dict]:
-        """Core pattern detection logic."""
+        """Core pattern detection logic with caching."""
         MIN_CONFIDENCE = PATTERN_SETTINGS['MIN_CONFIDENCE']
         
+        # Try cache first
+        cached_patterns = self.store.get_cached_patterns(thought)
+        if cached_patterns:
+            if CACHE_SETTINGS['METRICS_ENABLED']:
+                metrics = self.store.get_cache_metrics()
+                print(colored("\n📊 Cache Metrics:", "blue"))
+                print(f"  Total Entries: {metrics['total_entries']}")
+                print(f"  Total Hits: {metrics['total_hits']}")
+                print(f"  Avg Hits/Entry: {metrics['avg_hits']:.1f}")
+                print(f"  Avg Age: {metrics['avg_age_days']:.1f} days")
+            
+            print(colored("📦 Using cached patterns", "green"))
+            sequence_type = self._detect_sequence_type(thought)
+            return self._apply_weights(cached_patterns, sequence_type)
+        
+        try:
+            # Normal AI-based detection
+            patterns = await self._detect_patterns_from_ai(thought)
+            
+            # Cache the results
+            self.store.cache_pattern(thought, patterns)
+            
+            # Apply weights and return
+            sequence_type = self._detect_sequence_type(thought)
+            return self._apply_weights(patterns, sequence_type)
+            
+        except Exception as e:
+            print(colored(f"⚠️ Pattern detection failed: {str(e)}", "red"))
+            return []
+    
+    def _apply_weights(self, patterns: List[Dict], sequence_type: str) -> List[Dict]:
+        """Apply sequence-specific weights to patterns."""
+        weights = PATTERN_SETTINGS['PATTERN_WEIGHTS'].get(sequence_type, {
+            'emotional': 1.0,
+            'behavioral': 1.0,
+            'surface': 1.0,
+            'meta': 1.0
+        })
+        
+        weighted_patterns = []
+        for pattern in patterns:
+            category = pattern.get('category', 'unknown')
+            weight = weights.get(category, 1.0)
+            pattern['confidence'] = min(1.0, pattern['confidence'] * weight)
+            weighted_patterns.append(pattern)
+        
+        return [p for p in weighted_patterns if p['confidence'] >= PATTERN_SETTINGS['MIN_CONFIDENCE']]
+    
+    async def _store_patterns(self, patterns: List[Dict], thought: str) -> List[Dict]:
+        """Store patterns with proper error handling."""
+        stored_patterns = []
+        
+        # Initialize sequence if needed
+        if not self.current_sequence_id:
+            sequence_type = self._detect_sequence_type(thought)
+            self.current_sequence_id = self.store.create_sequence(sequence_type)
+        
+        # Store each pattern
+        for pattern in patterns:
+            try:
+                # Add metadata
+                pattern['timestamp'] = datetime.now().isoformat()
+                pattern['thought'] = thought
+                
+                # Store in database
+                pattern_id = self.store.store_pattern(
+                    pattern,
+                    self.current_sequence_id
+                )
+                pattern['id'] = pattern_id
+                
+                # Add to sequence
+                self.current_sequence.append({
+                    'thought': thought,
+                    'patterns': [pattern]
+                })
+                
+                stored_patterns.append(pattern)
+                
+            except Exception as e:
+                print(colored(f"Failed to store pattern: {str(e)}", "yellow"))
+                continue
+        
+        return stored_patterns
+    
+    async def _detect_patterns_from_ai(self, thought: str) -> List[Dict]:
+        """Core AI-based pattern detection."""
         system_prompt = """As a Pattern Analyst, identify organic patterns in thoughts.
 
 Core Principles:
@@ -261,53 +344,7 @@ Return as JSON:
         )
         
         result = json.loads(response.choices[0].message.content)
-        patterns = result.get('patterns', [])
-        
-        # Filter and validate
-        filtered_patterns = [
-            p for p in patterns 
-            if p.get("confidence", 0) >= MIN_CONFIDENCE
-        ]
-        
-        print(colored(f"\nDetected {len(filtered_patterns)} patterns", "cyan"))
-        return filtered_patterns
-    
-    async def _store_patterns(self, patterns: List[Dict], thought: str) -> List[Dict]:
-        """Store patterns with proper error handling."""
-        stored_patterns = []
-        
-        # Initialize sequence if needed
-        if not self.current_sequence_id:
-            sequence_type = self._detect_sequence_type(thought)
-            self.current_sequence_id = self.store.create_sequence(sequence_type)
-        
-        # Store each pattern
-        for pattern in patterns:
-            try:
-                # Add metadata
-                pattern['timestamp'] = datetime.now().isoformat()
-                pattern['thought'] = thought
-                
-                # Store in database
-                pattern_id = self.store.store_pattern(
-                    pattern,
-                    self.current_sequence_id
-                )
-                pattern['id'] = pattern_id
-                
-                # Add to sequence
-                self.current_sequence.append({
-                    'thought': thought,
-                    'patterns': [pattern]
-                })
-                
-                stored_patterns.append(pattern)
-                
-            except Exception as e:
-                print(colored(f"Failed to store pattern: {str(e)}", "yellow"))
-                continue
-        
-        return stored_patterns
+        return result.get('patterns', [])
 
 class EmotionalExplorer(CognitiveAgent):
     """Builds emotional context and understanding over time."""
