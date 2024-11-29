@@ -214,15 +214,35 @@ class MetaIntegration:
     def _allow_evolution(self, connections: List[Dict], emergence: List[Dict]) -> Dict:
         """Allow natural evolution of patterns and insights."""
         try:
-            # Calculate evolution strength
+            # Calculate evolution metrics
             connection_strength = len(connections) / 5.0  # Normalize
             emergence_strength = len(emergence) / 3.0     # Normalize
             
+            # Calculate theme coverage
+            themes = set()
+            for e in emergence:
+                if isinstance(e.get('theme'), str):
+                    themes.add(e['theme'])
+            theme_coverage = len(themes) / 4.0  # Normalize by expected themes
+            
+            # Calculate depth progression
+            depths = []
+            for conn in connections:
+                depths.extend([
+                    conn['core'].get('depth', 0),
+                    conn['meta'].get('depth', 0)
+                ])
+            avg_depth = sum(depths) / len(depths) if depths else 0
+            
             # Determine evolution stage
-            if connection_strength > 0.7 and emergence_strength > 0.7:
+            if connection_strength > 0.8 and emergence_strength > 0.8 and theme_coverage > 0.8:
+                stage = 'evolving'
+            elif connection_strength > 0.6 and emergence_strength > 0.6 and avg_depth > 0.7:
                 stage = 'established'
-            elif connection_strength > 0.3 or emergence_strength > 0.3:
+            elif connection_strength > 0.4 or (emergence_strength > 0.5 and theme_coverage > 0.5):
                 stage = 'developing'
+            elif connection_strength > 0.2 or emergence_strength > 0.3:
+                stage = 'connecting'
             else:
                 stage = 'emerging'
                 
@@ -230,16 +250,21 @@ class MetaIntegration:
             print(colored("\n🌱 Evolution Components:", "cyan"))
             print(f"  • Connection Strength: {connection_strength:.2f}")
             print(f"  • Emergence Strength: {emergence_strength:.2f}")
+            print(f"  • Theme Coverage: {theme_coverage:.2f}")
+            print(f"  • Average Depth: {avg_depth:.2f}")
             print(f"  • Evolution Stage: {stage}")
             
             return {
                 'stage': stage,
                 'connection_strength': connection_strength,
                 'emergence_strength': emergence_strength,
+                'theme_coverage': theme_coverage,
+                'depth': avg_depth,
                 'patterns': [
                     pattern for e in emergence 
                     for pattern in e.get('patterns', [])
-                ]
+                ],
+                'themes': list(themes)
             }
             
         except Exception as e:
@@ -248,7 +273,10 @@ class MetaIntegration:
                 'stage': 'emerging',
                 'connection_strength': 0,
                 'emergence_strength': 0,
-                'patterns': []
+                'theme_coverage': 0,
+                'depth': 0,
+                'patterns': [],
+                'themes': []
             }
         
     def _calculate_integration_quality(self, connections: List[Dict], emergence: List[Dict]) -> float:
