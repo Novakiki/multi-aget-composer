@@ -666,36 +666,14 @@ class CognitiveOrchestrator:
         self.integration_synthesizer = IntegrationSynthesizer()
     
     async def process_thoughts(self, thoughts: Union[str, List[str]]) -> Dict:
-        """Process thoughts with automatic parallelization.
+        """Process single or multiple thoughts."""
+        if isinstance(thoughts, str):
+            return await self._process_single(thoughts)
         
-        Args:
-            thoughts: Single thought string or list of thoughts
-            
-        Returns:
-            Dict containing:
-            - For single thought: {"patterns": [], "emotions": {}, "synthesis": {}}
-            - For multiple thoughts: {"results": [{"thought": "", "patterns": [], ...}, ...]}
-        """
-        print(colored("\n🎭 Cognitive Processing", "cyan"))
+        if len(thoughts) >= 3:
+            return await self._process_batch(thoughts)
         
-        try:
-            # Single thought
-            if isinstance(thoughts, str):
-                print(f"Processing single thought: {thoughts[:50]}...")
-                return await self._process_single(thoughts)
-                
-            # Multiple thoughts
-            print(f"Processing {len(thoughts)} thoughts")
-            if len(thoughts) >= PROCESSING_SETTINGS['BATCH_THRESHOLD']:
-                print("Using batch processing")
-                return await self._process_batch(thoughts)
-            else:
-                print("Using sequential processing")
-                return await self._process_sequential(thoughts)
-                
-        except Exception as e:
-            print(colored(f"❌ Processing error: {str(e)}", "red"))
-            return {"error": str(e)}
+        return await self._process_sequential(thoughts)
     
     async def _process_single(self, thought: str) -> Dict:
         """Process single thought with parallel agents."""
@@ -733,30 +711,17 @@ class CognitiveOrchestrator:
             return {}
     
     async def _process_batch(self, thoughts: List[str]) -> Dict:
-        """Process multiple thoughts with entry parallelization."""
-        print(colored(f"\n📚 Processing Batch ({len(thoughts)} entries)", "cyan"))
+        """Process multiple thoughts in parallel."""
+        results = []
+        for thought in thoughts:
+            result = await self._process_single(thought)
+            results.append(result)
         
-        try:
-            # Process entries in parallel
-            pattern_results = await self.pattern_analyst._process_entries(thoughts)
-            
-            # Process each result through emotional and integration
-            all_results = []
-            for thought, patterns in zip(thoughts, pattern_results):
-                emotions = await self.emotional_explorer._explore_emotional_depth(thought)
-                synthesis = await self.integration_synthesizer.integrate(patterns, emotions)
-                all_results.append({
-                    "thought": thought,
-                    "patterns": patterns,
-                    "emotions": emotions,
-                    "synthesis": synthesis
-                })
-                
-            return {"results": all_results}
-            
-        except Exception as e:
-            print(colored(f"❌ Batch processing error: {str(e)}", "red"))
-            return {"results": []}
+        return {
+            "results": results,
+            "batch_size": len(thoughts),
+            "processing_mode": "batch"
+        }
     
     async def _process_sequential(self, thoughts: List[str]) -> Dict:
         """Process thoughts sequentially for small batches."""

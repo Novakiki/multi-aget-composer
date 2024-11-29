@@ -4,7 +4,7 @@ from termcolor import colored
 from datetime import datetime
 
 class PatternVisualizer:
-    """Visualizes patterns and their evolution."""
+    """Tracks and evolves pattern understanding over time."""
     
     @staticmethod
     def show_pattern_evolution(pattern_history: List[Dict]) -> None:

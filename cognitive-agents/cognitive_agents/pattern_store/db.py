@@ -10,16 +10,29 @@ from termcolor import colored
 from ..config import DB_SETTINGS, CACHE_SETTINGS
 
 class PatternStore:
+    _instance = None
+    
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+            cls._instance._initialized = False
+        return cls._instance
+    
     def __init__(self):
-        # Convert relative paths to absolute using package location
+        if self._initialized:
+            return
+            
+        # Initialize only once
         base_path = Path(__file__).parent
         self.db_path = base_path / DB_SETTINGS['PATH'].split('/')[-1]
         self.schema_path = base_path / DB_SETTINGS['SCHEMA'].split('/')[-1]
         self.encoding = DB_SETTINGS['ENCODING']
         self.timeout = DB_SETTINGS['TIMEOUT']
         self.retries = DB_SETTINGS['RETRIES']
+        self.retry_delay = 1
         
         self._init_db()
+        self._initialized = True
     
     def _init_db(self):
         """Initialize database with retry logic."""
@@ -29,14 +42,21 @@ class PatternStore:
                     schema = f.read()
                 
                 conn = sqlite3.connect(self.db_path, timeout=self.timeout)
-                conn.executescript(schema)
+                # Execute each statement separately
+                for statement in schema.split(';'):
+                    statement = statement.strip()
+                    if statement:  # Skip empty statements
+                        print(f"Executing:\n{statement}\n")  # Debug
+                        conn.execute(statement)
+                conn.commit()
                 conn.close()
                 return
                 
             except Exception as e:
+                print(colored(f"❌ DB init attempt {attempt + 1} failed: {str(e)}", "red"))
                 if attempt == self.retries - 1:
                     raise
-                time.sleep(1)  # Wait before retry
+                time.sleep(self.retry_delay)
     
     def create_sequence(self, sequence_type: str) -> int:
         """Create a new sequence and return its ID."""
@@ -94,11 +114,21 @@ class PatternStore:
     def cleanup(self):
         """Clean up database for testing."""
         with sqlite3.connect(self.db_path) as conn:
+            # Drop all tables
             conn.executescript("""
                 DROP TABLE IF EXISTS patterns;
                 DROP TABLE IF EXISTS sequences;
+                DROP TABLE IF EXISTS pattern_cache;
+                DROP TABLE IF EXISTS cache_metrics;
+                DROP TABLE IF EXISTS pattern_proposals;
+                DROP TABLE IF EXISTS pattern_votes;
+                DROP TABLE IF EXISTS pattern_status_history;
+                DROP TABLE IF EXISTS validation_results;
+                DROP TABLE IF EXISTS validation_phases;
             """)
-            self._init_db()
+        
+        # Reinitialize clean database
+        self._init_db()
     
     def cache_pattern(self, thought: str, patterns: List[Dict]) -> None:
         """Cache patterns for a thought."""
@@ -147,37 +177,14 @@ class PatternStore:
             return []
     
     def cleanup_sequences(self):
-        """Clean up sequences while preserving pattern cache."""
+        """Clean up sequences while preserving structure."""
         with sqlite3.connect(self.db_path) as conn:
             conn.executescript("""
-                DROP TABLE IF EXISTS patterns;
-                DROP TABLE IF EXISTS sequences;
+                DELETE FROM patterns;
+                DELETE FROM sequences;
+                DELETE FROM pattern_cache;
             """)
-            # Reinitialize sequence tables only
-            conn.executescript("""
-                CREATE TABLE IF NOT EXISTS sequences (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    type TEXT NOT NULL,
-                    created_at TEXT NOT NULL DEFAULT (datetime('now'))
-                );
-                
-                CREATE TABLE IF NOT EXISTS patterns (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    sequence_id INTEGER,
-                    category TEXT NOT NULL,
-                    theme TEXT NOT NULL,
-                    confidence REAL NOT NULL,
-                    timestamp TIMESTAMP NOT NULL,
-                    thought TEXT NOT NULL,
-                    FOREIGN KEY (sequence_id) REFERENCES sequences(id)
-                );
-                
-                CREATE INDEX IF NOT EXISTS idx_patterns_sequence 
-                ON patterns(sequence_id);
-                
-                CREATE INDEX IF NOT EXISTS idx_patterns_category 
-                ON patterns(category);
-            """)
+            conn.commit()
     
     def cleanup_old_cache(self):
         """Remove expired cache entries."""

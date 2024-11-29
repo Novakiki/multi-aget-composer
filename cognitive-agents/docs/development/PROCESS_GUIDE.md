@@ -660,3 +660,40 @@ Think of it like:
 - But allowing natural interaction
 
 Remember: The goal is to mirror how human experts would naturally collaborate while maintaining system stability.
+
+# Processing Guide
+
+## Processing Modes
+
+The system supports three processing modes for cognitive analysis:
+
+### 1. Single Thought Processing
+- Parallel agent execution (Pattern Analysis & Emotional Analysis)
+- Real-time integration synthesis
+- Full depth analysis
+- Cache utilization for patterns
+
+### 2. Batch Processing (>= 3 thoughts)
+- Parallel entry processing
+- Concurrent pattern detection
+- Sequential emotional analysis
+- Integrated results aggregation
+- Shared caching system
+
+### 3. Sequential Processing (< 3 thoughts)
+- One-by-one thought processing
+- Full single thought pipeline
+- Maintains analysis depth
+- Better for debugging
+
+## Configuration
+
+Processing behavior can be configured in `config/settings.py`:
+```python
+PROCESSING_SETTINGS = {
+    'PARALLEL_MODE': 'auto',  # 'auto', 'entry', 'agent', or 'none'
+    'BATCH_THRESHOLD': 3,     # When to use batch processing
+    'TIMEOUT': 30,           # Seconds before timeout
+    'MAX_CONCURRENT': 5      # Maximum concurrent operations
+}
+```
