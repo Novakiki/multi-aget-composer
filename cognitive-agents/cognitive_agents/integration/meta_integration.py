@@ -2,6 +2,7 @@ from typing import Dict, List
 from datetime import datetime
 from termcolor import colored
 from cognitive_agents.memory.meta_learning import MetaLearning
+from cognitive_agents.memory.evolution_store import EvolutionStore
 
 class MetaIntegration:
     """Integrates meta-learning with core system."""
@@ -11,7 +12,8 @@ class MetaIntegration:
         self.questions = questions
         self.community = community
         self.meta = MetaLearning()
-        self.evolution_history = []  # Track evolution progression
+        self.evolution_store = EvolutionStore()
+        self.evolution_history = []  # Keep in-memory cache
         
     async def integrate_meta_learning(self, interaction: Dict) -> Dict:
         """Let meta-learning emerge naturally."""
@@ -273,7 +275,12 @@ class MetaIntegration:
                 
             # Update state with stage
             current_state['stage'] = stage
-            self.evolution_history.append(current_state)
+            
+            # Store in database
+            self.evolution_store.store_evolution_state(current_state)
+            
+            # Keep in-memory cache
+            self.evolution_history = self.evolution_store.get_evolution_history(limit=10)
             
             # Analyze progression
             progression = self._analyze_evolution_progression()
@@ -453,17 +460,24 @@ class MetaIntegration:
             
             # Calculate growth rate from metrics
             if len(self.evolution_history) >= 2:
-                current = self.evolution_history[-1]['metrics']
-                previous = self.evolution_history[-2]['metrics']
+                current = self.evolution_history[0]['metrics']  # Most recent first
+                previous = self.evolution_history[1]['metrics']
                 
-                # Compare key metrics
+                # Weight the metrics differently
                 growth_factors = [
-                    (current['connection_strength'] - previous['connection_strength']),
-                    (current['emergence_strength'] - previous['emergence_strength']),
-                    (current['theme_coverage'] - previous['theme_coverage']),
-                    (current['depth'] - previous['depth'])
+                    (current['connection_strength'] - previous['connection_strength']) * 0.3,
+                    (current['emergence_strength'] - previous['emergence_strength']) * 0.3,
+                    (current['theme_coverage'] - previous['theme_coverage']) * 0.2,
+                    (current['depth'] - previous['depth']) * 0.2
                 ]
-                growth_rate = sum(growth_factors) / len(growth_factors)
+                
+                # Add bonus for stage progression
+                if stage_changes > 0:
+                    growth_bonus = 0.2
+                else:
+                    growth_bonus = 0
+                    
+                growth_rate = sum(growth_factors) + growth_bonus
             else:
                 growth_rate = 0.0
                 
