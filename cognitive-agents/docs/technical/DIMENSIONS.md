@@ -120,3 +120,20 @@ def calculate_stage(pattern):
 - Direct matches (word overlap)
 - Semantic similarity (vector space)
 - Conceptual alignment (themes)
+
+## Question-Based Resonance Dimension
+
+### Natural Connection Layer
+```python
+# How shared questions create resonance
+resonance_types = {
+    'word_level': 0.33,     # Surface understanding
+    'theme_level': 1.00,    # Deep alignment
+    'question_level': 1.00  # Shared curiosity
+}
+```
+
+### Social Evolution Layer
+- Questions evolve naturally
+- Communities form around shared curiosity
+- Understanding deepens collectively

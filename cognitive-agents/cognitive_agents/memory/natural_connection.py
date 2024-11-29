@@ -170,18 +170,21 @@ class NaturalConnection:
     async def allow_flow(self, insight: Dict) -> Dict:
         """Let understanding flow naturally between levels."""
         try:
-            # 1. Individual insight influences collective
+            if insight.get('force'):
+                return {
+                    'resistance': True,
+                    'message': 'Natural flow required',
+                    'emerging_patterns': []
+                }
+                
+            # Process based on type
             if insight['type'] == 'individual':
                 return await self._flow_up(insight)
-            
-            # 2. Collective wisdom influences individual
             elif insight['type'] == 'collective':
                 return await self._flow_down(insight)
-            
-            # 3. Natural emergence between levels
             else:
                 return await self._allow_emergence(insight)
-            
+                
         except Exception as e:
             print(colored(f"❌ Flow error: {str(e)}", "red"))
             return {}
@@ -224,3 +227,11 @@ class NaturalConnection:
         except Exception as e:
             print(colored(f"❌ Emergence error: {str(e)}", "red"))
             return {}
+        
+    def _observe_emergence(self) -> List[Dict]:
+        """Observe emerging patterns."""
+        return [{
+            'type': 'emergent',
+            'content': 'Natural emergence',
+            'timestamp': datetime.now().isoformat()
+        }]

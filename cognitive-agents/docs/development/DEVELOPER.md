@@ -247,3 +247,26 @@ TECH_STACK = {
 3. Allow shared evolution
 ```
 
+## Question-Centric Development
+
+### Core Principles
+1. Questions drive development
+2. Understanding emerges naturally
+3. Community shapes evolution
+
+### Implementation Flow
+```python
+class QuestionDrivenDevelopment:
+    def start_with_questions(self):
+        """Begin with curiosity, not solutions."""
+        pass
+        
+    def enable_collective_exploration(self):
+        """Let community guide understanding."""
+        pass
+        
+    def track_evolution(self):
+        """Watch how questions and understanding grow."""
+        pass
+```
+

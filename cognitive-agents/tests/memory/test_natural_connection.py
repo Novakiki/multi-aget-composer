@@ -41,14 +41,14 @@ class TestNaturalConnection:
         
     async def test_collective_to_individual_flow(self, connection):
         """Test natural flow from collective to individual."""
-        # Collective wisdom emerges
+        connection = await connection
+        
         collective_wisdom = {
             'type': 'collective',
             'patterns': ['Learning evolves naturally'],
             'questions': ['How do we grow together?']
         }
         
-        # Let it influence naturally
         result = await connection.allow_flow(collective_wisdom)
         
         print(colored("\n🔄 Testing Collective → Individual Flow:", "cyan"))
@@ -61,6 +61,8 @@ class TestNaturalConnection:
         
     async def test_emergent_understanding(self, connection):
         """Test natural emergence between levels."""
+        connection = await connection
+        
         # Multiple insights flow
         insights = [
             {'type': 'individual', 'content': 'Learning takes time'},
@@ -84,6 +86,8 @@ class TestNaturalConnection:
         
     async def test_natural_resistance(self, connection):
         """Test system allows natural resistance."""
+        connection = await connection
+        
         # Force an insight
         forced_insight = {
             'type': 'individual',
