@@ -1,0 +1,36 @@
+# Core Dependencies
+termcolor
+pinecone-client
+asyncpg
+
+# Database Drivers
+sqlalchemy
+aiosqlite
+
+# Testing
+pytest
+pytest-asyncio
+pytest-mock
+
+# Async Support
+aiohttp
+asyncio
+
+# Vector Operations
+numpy
+scikit-learn
+
+# Development Tools
+black
+flake8
+mypy
+
+# Documentation
+sphinx
+sphinx-rtd-theme
+
+# Type Hints
+typing-extensions
+
+# Environment Management
+python-dotenv 
