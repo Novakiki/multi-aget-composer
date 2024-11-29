@@ -23,40 +23,57 @@ class PatternStore:
             return
             
         # Initialize only once
-        base_path = Path(__file__).parent
-        self.db_path = base_path / DB_SETTINGS['PATH'].split('/')[-1]
-        self.schema_path = base_path / DB_SETTINGS['SCHEMA'].split('/')[-1]
-        self.encoding = DB_SETTINGS['ENCODING']
-        self.timeout = DB_SETTINGS['TIMEOUT']
-        self.retries = DB_SETTINGS['RETRIES']
-        self.retry_delay = 1
+        base_path = Path(DB_SETTINGS['path']).parent
+        base_path.mkdir(parents=True, exist_ok=True)
         
-        self._init_db()
-        self._initialized = True
+        self.db_path = Path(DB_SETTINGS['path'])
+        self._setup_database()
+        PatternStore._initialized = True
     
-    def _init_db(self):
-        """Initialize database with retry logic."""
-        for attempt in range(self.retries):
-            try:
-                with open(self.schema_path, 'r', encoding=self.encoding) as f:
-                    schema = f.read()
+    def _setup_database(self):
+        """Initialize database schema."""
+        try:
+            with sqlite3.connect(
+                self.db_path,
+                timeout=DB_SETTINGS['timeout'],
+                isolation_level=DB_SETTINGS['isolation_level']
+            ) as conn:
+                # Create patterns table
+                conn.execute("""
+                    CREATE TABLE IF NOT EXISTS patterns (
+                        id TEXT PRIMARY KEY,
+                        type TEXT NOT NULL,
+                        content TEXT NOT NULL,
+                        confidence REAL NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                """)
                 
-                conn = sqlite3.connect(self.db_path, timeout=self.timeout)
-                # Execute each statement separately
-                for statement in schema.split(';'):
-                    statement = statement.strip()
-                    if statement:  # Skip empty statements
-                        print(f"Executing:\n{statement}\n")  # Debug
-                        conn.execute(statement)
+                # Create sequences table
+                conn.execute("""
+                    CREATE TABLE IF NOT EXISTS sequences (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        type TEXT NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                """)
+                
+                # Create pattern_cache table
+                conn.execute("""
+                    CREATE TABLE IF NOT EXISTS pattern_cache (
+                        hash TEXT PRIMARY KEY,
+                        patterns TEXT NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        last_used TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        use_count INTEGER DEFAULT 1
+                    )
+                """)
+                
                 conn.commit()
-                conn.close()
-                return
                 
-            except Exception as e:
-                print(colored(f"❌ DB init attempt {attempt + 1} failed: {str(e)}", "red"))
-                if attempt == self.retries - 1:
-                    raise
-                time.sleep(self.retry_delay)
+        except Exception as e:
+            print(colored(f"❌ Database setup error: {str(e)}", "red"))
+            raise
     
     def create_sequence(self, sequence_type: str) -> int:
         """Create a new sequence and return its ID."""
@@ -128,7 +145,7 @@ class PatternStore:
             """)
         
         # Reinitialize clean database
-        self._init_db()
+        self._setup_database()
     
     def cache_pattern(self, thought: str, patterns: List[Dict]) -> None:
         """Cache patterns for a thought."""
@@ -155,36 +172,52 @@ class PatternStore:
 
     def get_cached_patterns(self, thought: str) -> List[Dict]:
         """Get cached patterns."""
-        thought_hash = hashlib.sha256(thought.encode()).hexdigest()
-        
-        with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.execute("""
-                SELECT patterns_json
-                FROM pattern_cache
-                WHERE thought_hash = ?
-            """, (thought_hash,))
+        try:
+            thought_hash = hashlib.sha256(thought.encode()).hexdigest()
             
-            row = cursor.fetchone()
-            if row:
-                # Update usage stats
-                conn.execute("""
-                    UPDATE pattern_cache 
-                    SET last_used_at = datetime('now'),
-                        use_count = use_count + 1
-                    WHERE thought_hash = ?
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.execute("""
+                    SELECT patterns 
+                    FROM pattern_cache
+                    WHERE hash = ?
                 """, (thought_hash,))
-                return json.loads(row[0])
+                
+                row = cursor.fetchone()
+                if row:
+                    # Update usage stats
+                    conn.execute("""
+                        UPDATE pattern_cache 
+                        SET last_used = datetime('now'),
+                            use_count = use_count + 1
+                        WHERE hash = ?
+                    """, (thought_hash,))
+                    return json.loads(row[0])
+                return []
+                
+        except Exception as e:
+            print(colored(f"⚠️ Error retrieving patterns: {str(e)}", "yellow"))
             return []
     
     def cleanup_sequences(self):
         """Clean up sequences while preserving structure."""
-        with sqlite3.connect(self.db_path) as conn:
-            conn.executescript("""
-                DELETE FROM patterns;
-                DELETE FROM sequences;
-                DELETE FROM pattern_cache;
-            """)
-            conn.commit()
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                # Check if tables exist first
+                tables = conn.execute("""
+                    SELECT name FROM sqlite_master 
+                    WHERE type='table' AND name IN ('patterns', 'sequences', 'pattern_cache')
+                """).fetchall()
+                
+                if tables:  # Only delete if tables exist
+                    conn.executescript("""
+                        DELETE FROM patterns;
+                        DELETE FROM sequences;
+                        DELETE FROM pattern_cache;
+                    """)
+                    conn.commit()
+                
+        except Exception as e:
+            print(colored(f"❌ Cleanup error: {str(e)}", "red"))
     
     def cleanup_old_cache(self):
         """Remove expired cache entries."""

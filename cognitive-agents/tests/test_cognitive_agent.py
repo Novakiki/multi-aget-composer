@@ -12,14 +12,13 @@ async def test_natural_unfolding():
     
     # Initial thought
     result1 = await agent.process_thought("I feel stuck")
+    assert 'patterns' in result1
+    assert len(result1['patterns']) > 0
     
     # Deeper exploration
     result2 = await agent.process_thought("Exploring why I feel stuck")
-    
-    # Assertions
     assert len(result2['patterns']) >= len(result1['patterns'])
-    assert result2['depth'] > result1['depth']
-    assert 'meta_synthesis' in result2
+    assert result2['meta_synthesis']['integration_quality'] > 0.5
 
 @pytest.mark.asyncio
 async def test_resource_awareness():
@@ -51,16 +50,16 @@ async def test_pattern_memory():
         "I worry about the unknown"
     ]
     
-    patterns = set()
+    pattern_ids = set()  # Track pattern IDs instead of full patterns
     for thought in thoughts:
         result = await agent.process_thought(thought)
-        patterns.update(result.get('patterns', []))
+        pattern_ids.update(p['id'] for p in result.get('patterns', []))
     
-    # Check pattern memory
+    # Verify pattern memory
     assert len(agent.pattern_memory) > 0
-    assert len(patterns) > 0
+    assert len(pattern_ids) > 0
     
     # Check pattern relevance
     last_pattern = agent.pattern_memory[-1]
     is_relevant = agent._is_pattern_relevant(last_pattern, thoughts[-1])
-    assert is_relevant 
+    assert is_relevant

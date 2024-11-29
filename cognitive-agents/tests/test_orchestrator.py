@@ -1,85 +1,66 @@
 import pytest
-from cognitive_agents.agents.specialized_agents import CognitiveOrchestrator
-from cognitive_agents.pattern_store.db import PatternStore
-from pathlib import Path
-from termcolor import colored
+from cognitive_agents.core.orchestrator import Orchestrator
 
 @pytest.mark.asyncio
-class TestOrchestrator:
-    """Test the core orchestration functionality."""
+async def test_basic_thought_processing():
+    """Test basic thought processing flow."""
+    orchestrator = Orchestrator()
     
-    @pytest.fixture(autouse=True, scope="class")
-    def setup_db(self):
-        """Setup fresh database before any tests."""
-        # Delete existing DB
-        db_path = Path(__file__).parent.parent / "cognitive_agents/pattern_store/patterns.db"
-        if db_path.exists():
-            db_path.unlink()
-        
-        # Let tests run
-        yield
-        
-        # Cleanup after all tests
-        if db_path.exists():
-            db_path.unlink()
+    # Process a simple thought
+    thought = "I feel curious about learning"
+    result = await orchestrator.process_thought(thought)
     
-    @pytest.fixture(autouse=True)
-    async def setup_cleanup(self):
-        """Per-test cleanup."""
-        store = PatternStore()
-        
-        # Run test
-        yield
-        
-        # Clean tables between tests
-        store.cleanup_sequences()  # Only clean sequences, keep structure
+    # Verify basic processing occurred
+    assert result is not None
+    assert 'patterns' in result
+    assert 'connections' in result
+    assert 'emergent_insights' in result
+
+@pytest.mark.asyncio
+async def test_multi_dimensional_processing():
+    """Test processing across dimensions."""
+    orchestrator = Orchestrator()
     
-    @pytest.fixture
-    async def orchestrator(self):
-        return CognitiveOrchestrator()
+    # Process thought that should engage all dimensions
+    thought = "I notice patterns repeating in my life"
+    result = await orchestrator.process_thought(thought)
     
-    async def test_single_thought(self, orchestrator):
-        """Test single thought processing."""
-        orchestrator = await orchestrator
-        result = await orchestrator.process_thoughts(
-            "Starting this project with mixed emotions"
-        )
-        assert "patterns" in result
-        assert "emotions" in result
-        assert "synthesis" in result
-        
-    async def test_batch_processing(self, orchestrator):
-        """Test batch thought processing."""
-        orchestrator = await orchestrator
-        
-        thoughts = [
-            "Starting the project with careful planning",
-            "Making progress through systematic steps",
-            "Encountering challenges but staying focused"
-        ]
-        
-        try:
-            result = await orchestrator.process_thoughts(thoughts)
-            print(colored(f"\nBatch result: {result}", "cyan"))  # Debug
-            
-            assert "results" in result, "Missing 'results' key in response"
-            assert isinstance(result["results"], list), "'results' should be a list"
-            assert len(result["results"]) == len(thoughts), f"Expected {len(thoughts)} results, got {len(result['results'])}"
-            
-            # Check each result
-            for i, res in enumerate(result["results"]):
-                assert "patterns" in res, f"Result {i} missing patterns"
-                assert "emotions" in res, f"Result {i} missing emotions"
-                
-        except Exception as e:
-            print(colored(f"\n❌ Batch processing error: {str(e)}", "red"))
-            raise
+    # Verify dimensional processing
+    synthesis = result
+    assert len(synthesis['patterns']) >= 3  # One per dimension
+    assert synthesis['connections'] > 0     # Connections formed
     
-    async def test_sequential_processing(self, orchestrator):
-        """Test sequential processing (small batch)."""
-        orchestrator = await orchestrator
-        
-        thoughts = ["First thought", "Second thought"]
-        result = await orchestrator.process_thoughts(thoughts)
-        assert "results" in result
-        assert len(result["results"]) == 2 
+@pytest.mark.asyncio
+async def test_natural_emergence():
+    """Test natural pattern emergence."""
+    orchestrator = Orchestrator()
+    
+    # Process multiple related thoughts
+    thoughts = [
+        "I feel excited about new ideas",
+        "Learning brings me joy",
+        "Understanding patterns excites me"
+    ]
+    
+    results = []
+    for thought in thoughts:
+        result = await orchestrator.process_thought(thought)
+        results.append(result)
+    
+    # Verify emergence
+    final_result = results[-1]
+    assert final_result['emergent_insights'] > 0
+    
+@pytest.mark.asyncio
+async def test_error_handling():
+    """Test error handling and recovery."""
+    orchestrator = Orchestrator()
+    
+    # Test with invalid input
+    result = await orchestrator.process_thought("")
+    assert 'error' in result
+    
+    # Verify system can continue processing
+    valid_result = await orchestrator.process_thought("A valid thought")
+    assert 'error' not in valid_result
+    

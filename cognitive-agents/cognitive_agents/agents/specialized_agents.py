@@ -5,11 +5,13 @@ from termcolor import colored
 import json
 import asyncio
 import hashlib
+import os
 
 from .cognitive_agent import CognitiveAgent
 from ..visualization.pattern_viz import PatternVisualizer
 from ..pattern_store.db import PatternStore
 from ..config import PATTERN_SETTINGS, CACHE_SETTINGS, PROCESSING_SETTINGS
+from ..openai_client import AsyncOpenAI
 
 class PatternError(Exception):
     """Base class for pattern-related errors."""
@@ -28,9 +30,12 @@ class PatternStorageError(PatternError):
     pass
 
 class PatternAnalyst(CognitiveAgent):
-    """Tracks and evolves pattern understanding over time."""
+    """Specialized agent for pattern analysis."""
+    
     def __init__(self):
         super().__init__("Pattern Analyst", depth=1)
+        self.client = AsyncOpenAI()
+        self.pattern_history = []
         self.store = PatternStore()
         self.reset_state()
         
@@ -61,59 +66,34 @@ class PatternAnalyst(CognitiveAgent):
         return patterns_by_theme
     
     async def _find_new_patterns(self, thought: str) -> List[Dict]:
-        """Identify new patterns in current thought with error recovery."""
-        stored_patterns = []
-        
+        """Find patterns in thought."""
         try:
-            # Initialize sequence first
-            if not self.current_sequence_id:
-                sequence_type = self._detect_sequence_type(thought)
-                self.current_sequence_id = self.store.create_sequence(sequence_type)
-                print(colored(f"\nCreated new sequence: {sequence_type} (ID: {self.current_sequence_id})", "blue"))
+            result = await self.client.chat_with_retries(
+                messages=[{
+                    "role": "system",
+                    "content": """Analyze this thought for patterns. Return JSON with format:
+                    {
+                        "patterns": [
+                            {
+                                "category": "emotional/behavioral/cognitive/meta",
+                                "theme": "pattern description",
+                                "confidence": 0.8,
+                                "evidence": ["supporting detail 1", "supporting detail 2"]
+                            }
+                        ]
+                    }"""
+                }, {
+                    "role": "user",
+                    "content": thought
+                }]
+            )
             
-            # Detect patterns
-            patterns = await self._detect_patterns(thought)
-            
-            # Store each pattern
-            for pattern in patterns:
-                try:
-                    pattern['timestamp'] = datetime.now().isoformat()
-                    pattern['thought'] = thought
-                    pattern_id = self.store.store_pattern(pattern, self.current_sequence_id)
-                    pattern['id'] = pattern_id
-                    
-                    # Add to sequence
-                    self.current_sequence.append({
-                        'thought': thought,
-                        'patterns': [pattern]
-                    })
-                    self.pattern_history.append(pattern)
-                    stored_patterns.append(pattern)
-                    
-                except Exception as e:
-                    print(colored(f"Failed to store pattern: {str(e)}", "yellow"))
-            
-            return stored_patterns
-            
-        except PatternValidationError as e:
-            print(colored(f"⚠️ Validation Error: {str(e)}", "yellow"))
-            return self._handle_minimal_input(thought)  # Fallback to minimal
-            
-        except PatternDetectionError as e:
-            print(colored(f"❌ Detection Error: {str(e)}", "red"))
-            if stored_patterns:  # Return any patterns we found before error
-                print(colored(f"↺ Recovered {len(stored_patterns)} patterns", "green"))
-                return stored_patterns
-            return self._handle_minimal_input(thought)  # Fallback if nothing found
-            
-        except PatternStorageError as e:
-            print(colored(f"💾 Storage Error: {str(e)}", "red"))
-            return stored_patterns  # Return patterns even if storage failed
+            patterns = result.get('patterns', [])
+            self.pattern_history.extend(patterns)
+            return patterns
             
         except Exception as e:
-            print(colored(f"⚠️ Unexpected error in pattern finding: {str(e)}", "red"))
-            if stored_patterns:
-                return stored_patterns
+            print(colored(f"⚠️ Pattern detection failed: {str(e)}", "yellow"))
             return []
     
     async def _analyze_pattern_correlations(self) -> Dict:
@@ -418,153 +398,163 @@ Return as JSON:
             return []
 
 class EmotionalExplorer(CognitiveAgent):
-    """Builds emotional context and understanding over time."""
+    """Specialized agent for emotional pattern analysis."""
+    
     def __init__(self):
         super().__init__("Emotional Explorer", depth=2)
         self.emotional_context = {
-            'history': [],  # Emotional progression
-            'themes': {},   # Recurring emotional themes
-            'transitions': []  # Emotional shifts
+            'history': [],
+            'themes': set(),
+            'transitions': []
         }
-        
+        self.client = AsyncOpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+
     async def _explore_emotional_depth(self, thought: str) -> Dict:
-        """Explore emotional layers of the thought."""
+        """Explore emotional depth of thought."""
         try:
-            response = await self.ai.chat.completions.create(
-                model="gpt-4o-mini-2024-07-18",
+            result = await self._analyze_emotion(thought)
+            
+            # Add to emotional context with thought included
+            self.emotional_context['history'].append({
+                'thought': thought,  # Add the original thought
+                'timestamp': datetime.now().isoformat(),
+                'analysis': result
+            })
+            
+            print(colored("\n📊 Emotional Context Updated:", "cyan"))
+            print(f"  History entries: {len(self.emotional_context['history'])}")
+            print(f"  Themes tracked: {len(self.emotional_context['themes'])}")
+            print(f"  Transitions: {len(self.emotional_context['transitions'])}")
+            
+            return result
+            
+        except Exception as e:
+            print(colored(f"❌ Error in emotional exploration: {str(e)}", "red"))
+            return {}
+
+    def _update_emotional_context(self, result: Dict, thought: str) -> None:
+        """Update emotional context with new insights."""
+        try:
+            # Add single entry with both analysis and thought
+            entry = {
+                'timestamp': datetime.now().isoformat(),
+                'thought': thought,
+                'analysis': result
+            }
+            
+            # Replace any existing entries for this thought
+            existing_entries = [
+                i for i, e in enumerate(self.emotional_context['history']) 
+                if e.get('thought') == thought
+            ]
+            if existing_entries:
+                self.emotional_context['history'][existing_entries[0]] = entry
+            else:
+                self.emotional_context['history'].append(entry)
+            
+            # Track themes and transitions
+            if 'themes' in result.get('emotional_context', {}):
+                self.emotional_context['themes'].update(
+                    result['emotional_context']['themes']
+                )
+            
+            # Track transitions
+            if len(self.emotional_context['history']) > 1:
+                previous = self.emotional_context['history'][-2]
+                if (previous['analysis']['primary_emotion'] != 
+                    result['primary_emotion']):
+                    self.emotional_context['transitions'].append({
+                        'from': previous['analysis']['primary_emotion'],
+                        'to': result['primary_emotion'],
+                        'timestamp': entry['timestamp']
+                    })
+            
+        except Exception as e:
+            print(colored(f"Error updating emotional context: {str(e)}", "red"))
+
+    async def _analyze_emotion(self, thought: str) -> Dict:
+        """Analyze emotional content of thought."""
+        try:
+            result = await self.client.chat_with_retries(
                 messages=[{
                     "role": "system",
-                    "content": """As an Emotional Explorer, analyze the emotional layers in this thought.
-                    Consider:
-                    - Primary emotions
-                    - Secondary emotions
-                    - Emotional context
-                    - Emotional patterns
-                    - Emotional transitions
-                    
-                    Return a JSON object with format:
+                    "content": """Analyze the emotional content of this thought.
+                    Return JSON with format:
                     {
-                        "primary_emotion": "emotion name",
-                        "secondary_emotions": ["emotion1", "emotion2"],
+                        "primary_emotion": "main emotion",
+                        "secondary_emotions": ["other", "emotions"],
                         "emotional_context": {
                             "situation": "context description",
-                            "intensity": 0.0 to 1.0,
-                            "triggers": ["trigger1", "trigger2"]
+                            "intensity": 0.7,
+                            "themes": ["theme1", "theme2"]
                         }
                     }"""
                 }, {
                     "role": "user",
                     "content": thought
-                }],
-                temperature=0.7,
-                response_format={"type": "json_object"}
+                }]
             )
             
-            emotional_layer = json.loads(response.choices[0].message.content)
-            
             # Update emotional context
-            self._update_emotional_context({
-                'timestamp': datetime.now().isoformat(),
-                'thought': thought,
-                'analysis': emotional_layer
-            })
+            self._update_emotional_context(result, thought)
             
-            print(colored("\n💭 Emotional Layer:", "magenta"))
-            print(f"  Primary: {emotional_layer.get('primary_emotion')}")
-            print(f"  Context: {emotional_layer.get('emotional_context', {}).get('situation')}")
-            
-            return emotional_layer
+            return result
             
         except Exception as e:
-            print(colored(f"Error in emotional exploration: {str(e)}", "red"))
-            return {}
-    
-    def _update_emotional_context(self, new_layer: Dict) -> None:
-        """Update emotional context with new insights."""
-        try:
-            # Add to history
-            self.emotional_context['history'].append(new_layer)
-            
-            # Update themes
-            if 'analysis' in new_layer and 'primary_emotion' in new_layer['analysis']:
-                primary = new_layer['analysis']['primary_emotion']
-                if primary:
-                    if primary not in self.emotional_context['themes']:
-                        self.emotional_context['themes'][primary] = []
-                    self.emotional_context['themes'][primary].append(new_layer['timestamp'])
-            
-            # Track transitions if there's history
-            if len(self.emotional_context['history']) > 1:
-                previous = self.emotional_context['history'][-2]
-                current = new_layer
-                
-                if (previous.get('analysis', {}).get('primary_emotion') != 
-                    current.get('analysis', {}).get('primary_emotion')):
-                    self.emotional_context['transitions'].append({
-                        'from': previous.get('analysis', {}).get('primary_emotion'),
-                        'to': current.get('analysis', {}).get('primary_emotion'),
-                        'timestamp': current['timestamp']
-                    })
-            
-            print(colored("\n📊 Emotional Context Updated:", "blue"))
-            print(f"  History entries: {len(self.emotional_context['history'])}")
-            print(f"  Themes tracked: {len(self.emotional_context['themes'])}")
-            print(f"  Transitions: {len(self.emotional_context['transitions'])}")
-            
-        except Exception as e:
-            print(colored(f"Error updating emotional context: {str(e)}", "red"))
+            print(colored(f"❌ Error analyzing emotion: {str(e)}", "red"))
+            return {
+                "primary_emotion": "unknown",
+                "secondary_emotions": [],
+                "emotional_context": {
+                    "situation": "",
+                    "intensity": 0.0,
+                    "themes": []
+                }
+            }
 
 class IntegrationSynthesizer(CognitiveAgent):
     """Synthesizes insights across perspectives with memory."""
     def __init__(self):
         super().__init__("Integration Synthesizer", depth=3)
+        self.client = AsyncOpenAI()
         self.insight_patterns = {
-            'connections': [],    # Cross-perspective patterns
-            'meta_themes': {},    # Higher-level understanding
-            'evolution': []       # How understanding develops
+            'evolution': [],
+            'connections': [],
+            'meta': []
         }
     
-    async def integrate(self, pattern_insights: List[Dict], emotional_insights: Dict) -> Dict:
-        """Integrate insights from different perspectives."""
+    async def integrate(self, patterns: List[Dict], emotions: Dict) -> Dict:
+        """Integrate patterns and emotions into higher understanding."""
         try:
-            # Convert list to dict format expected by other methods
-            patterns_dict = {"patterns": pattern_insights}
-            
-            # Find connections between patterns and emotions
-            connections = self._find_cross_perspective_patterns(
-                patterns_dict, 
-                emotional_insights
+            result = await self.client.chat_with_retries(
+                messages=[{
+                    "role": "system",
+                    "content": """Integrate patterns and emotions into meta-understanding.
+                    Return JSON with format:
+                    {
+                        "meta_understanding": {
+                            "themes": ["theme1", "theme2"],
+                            "insights": ["insight1", "insight2"],
+                            "evolution": {
+                                "stage": "stage_name",
+                                "direction": "direction_name"
+                            }
+                        }
+                    }"""
+                }, {
+                    "role": "user",
+                    "content": json.dumps({
+                        "patterns": patterns,
+                        "emotions": emotions
+                    })
+                }]
             )
             
-            # Build meta-understanding
-            meta_understanding = await self._build_meta_cognition(
-                connections,
-                patterns_dict,
-                emotional_insights
-            )
-            
-            # Track evolution
-            self.insight_patterns['evolution'].append({
-                'timestamp': datetime.now().isoformat(),
-                'patterns': len(pattern_insights),
-                'connections': len(connections)
-            })
-            
-            return {
-                "meta_understanding": meta_understanding,
-                "connections": connections,
-                "patterns": pattern_insights,
-                "emotions": emotional_insights
-            }
+            return result
             
         except Exception as e:
-            print(colored(f"Integration error: {str(e)}", "red"))
-            return {
-                "meta_understanding": {},
-                "connections": [],
-                "patterns": [],
-                "emotions": {}
-            }
+            print(colored(f"❌ Integration error: {str(e)}", "red"))
+            return {}
     
     def _find_cross_perspective_patterns(
         self, 

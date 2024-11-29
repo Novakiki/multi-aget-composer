@@ -1,19 +1,19 @@
-"""Configuration module for cognitive agents.
+"""Configuration module for cognitive agents."""
 
-See docs/technical/ARCHITECTURE.md for system design
-See docs/development/PROCESS_GUIDE.md for implementation details
-"""
-
+from .thresholds import CONSCIOUSNESS_THRESHOLDS
+from .spawn_config import SPAWN_CONFIG
 from .settings import (
-    PATTERN_SETTINGS,
-    CACHE_SETTINGS,
     DB_SETTINGS,
+    CACHE_SETTINGS,
+    PATTERN_SETTINGS,
     PROCESSING_SETTINGS
 )
 
 __all__ = [
-    'PATTERN_SETTINGS',
-    'CACHE_SETTINGS',
+    'CONSCIOUSNESS_THRESHOLDS',
+    'SPAWN_CONFIG',
     'DB_SETTINGS',
+    'CACHE_SETTINGS',
+    'PATTERN_SETTINGS',
     'PROCESSING_SETTINGS'
 ] 

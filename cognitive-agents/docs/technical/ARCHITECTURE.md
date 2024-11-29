@@ -31,26 +31,19 @@ PROCESSING_DYNAMICS = {
         'mechanism': 'Subscribe and publish',
         'flow': 'Natural emergence of insights'
     },
-    'hybrid_processing': {
-        'orchestration': {
-            'layer': 'Higher-order integration',
-            'purpose': 'Unified experience synthesis',
-            'strengths': ['pattern recognition', 'meaning making', 'insight emergence']
-        },
-        'performance': {
-            'layer': 'Foundation processing',
-            'purpose': 'Rapid information processing',
-            'strengths': ['speed', 'efficiency', 'reliability']
-        }
+    'community_driven': {
+        'purpose': 'Collective pattern validation',
+        'mechanism': 'Voting and collaboration',
+        'flow': 'Pattern refinement and growth'
     }
 }
 ```
 
 ### 3. Integration Flow
-- **Event Bus**: Central nervous system for agent communication
+- **Event Bus**: Central nervous system
 - **Agent Pool**: Dynamic resource management
-- **Insight Collector**: Organic pattern synthesis
-- **Performance Layer**: Optimized processing modules
+- **Insight Collector**: Pattern synthesis
+- **Community Layer**: Collaborative validation
 
 ## Next Steps
 

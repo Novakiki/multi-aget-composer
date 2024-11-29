@@ -1,65 +1,44 @@
-"""Configuration settings for cognitive agents."""
+"""Core settings for the cognitive agents system."""
 
-# Pattern Analysis Settings
+from pathlib import Path
+
+# Get base project directory
+BASE_DIR = Path(__file__).parent.parent.parent
+
+DB_SETTINGS = {
+    'path': str(BASE_DIR / 'data' / 'patterns.db'),
+    'timeout': 30,
+    'check_same_thread': False,
+    'isolation_level': None
+}
+
+CACHE_SETTINGS = {
+    'enabled': True,
+    'max_size': 1000,
+    'ttl_seconds': 3600,
+    'metrics_enabled': True
+}
+
 PATTERN_SETTINGS = {
-    'MIN_CONFIDENCE': 0.7,  # Minimum confidence threshold
-    'CONFIDENCE_LEVELS': {
-        'VERY_HIGH': 0.9,
-        'HIGH': 0.8,
-        'MODERATE': 0.7
-    },
-    # Add sequence types
+    'MIN_CONFIDENCE': 0.7,
     'SEQUENCE_TYPES': {
-        'confidence': ['confident', 'unsure', 'understanding'],
-        'frustration': ['frustrat', 'problem', 'issue'],
-        'excitement': ['excit', 'can\'t wait', 'incredible']
+        'emotional': ['feel', 'emotion', 'mood'],
+        'behavioral': ['do', 'act', 'behave'],
+        'cognitive': ['think', 'believe', 'understand'],
+        'meta': ['notice', 'observe', 'realize']
     },
-    # Add pattern weights
     'PATTERN_WEIGHTS': {
-        'confidence': {
-            'emotional': 1.2,    # Boost emotional patterns
-            'behavioral': 1.0,
-            'surface': 0.9,
-            'meta': 0.9
-        },
-        'frustration': {
-            'emotional': 1.1,
-            'behavioral': 1.1,   # Equal weight to emotional/behavioral
-            'surface': 0.9,
-            'meta': 1.0
-        },
-        'excitement': {
+        'emotional': {
             'emotional': 1.2,
-            'behavioral': 1.0,
-            'surface': 0.9,
-            'meta': 0.9
+            'behavioral': 0.8,
+            'surface': 0.7,
+            'meta': 1.0
         }
     }
 }
 
-# Database Settings
-DB_SETTINGS = {
-    'PATH': 'pattern_store/patterns.db',
-    'SCHEMA': 'pattern_store/schema.sql',
-    'ENCODING': 'utf-8',
-    'TIMEOUT': 30,  # seconds
-    'RETRIES': 3    # number of connection retries
-}
-
-# Cache Settings
-CACHE_SETTINGS = {
-    'MAX_AGE_DAYS': 7,          # Expire patterns after 7 days
-    'MIN_USE_COUNT': 2,         # Keep patterns used at least twice
-    'MAX_CACHE_SIZE': 1000,     # Maximum patterns to store
-    'METRICS_ENABLED': True     # Track hit/miss metrics
-}
-
 PROCESSING_SETTINGS = {
-    'PARALLEL_MODE': 'auto',  # 'auto', 'entry', 'agent', or 'none'
-    'BATCH_THRESHOLD': 3,     # When to use entry parallelization
-    'TIMEOUT': 30,           # Seconds before timeout
-    'MAX_CONCURRENT': 5,     # Maximum concurrent operations
-    'AGENT_DEPENDENCIES': {
-        'IntegrationSynthesizer': ['PatternAnalyst', 'EmotionalExplorer']
-    }
+    'TIMEOUT': 30,  # seconds
+    'MAX_RETRIES': 3,
+    'BATCH_SIZE': 10
 } 
