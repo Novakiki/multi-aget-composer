@@ -123,28 +123,28 @@ class PatternStore:
             except Exception as e:
                 print(colored(f"Cache error: {str(e)}", "yellow"))
 
-    def get_cached_patterns(self, thought: str) -> Optional[List[Dict]]:
-        """Retrieve cached patterns for a thought."""
+    def get_cached_patterns(self, thought: str) -> List[Dict]:
+        """Get cached patterns."""
         thought_hash = hashlib.sha256(thought.encode()).hexdigest()
         
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.execute("""
-                SELECT patterns_json 
-                FROM pattern_cache 
+                SELECT patterns_json
+                FROM pattern_cache
                 WHERE thought_hash = ?
             """, (thought_hash,))
             
-            result = cursor.fetchone()
-            if result:
+            row = cursor.fetchone()
+            if row:
+                # Update usage stats
                 conn.execute("""
                     UPDATE pattern_cache 
                     SET last_used_at = datetime('now'),
                         use_count = use_count + 1
                     WHERE thought_hash = ?
                 """, (thought_hash,))
-                return json.loads(result[0])
-        
-        return None
+                return json.loads(row[0])
+            return []
     
     def cleanup_sequences(self):
         """Clean up sequences while preserving pattern cache."""

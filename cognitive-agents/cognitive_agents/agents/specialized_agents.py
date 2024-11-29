@@ -1,13 +1,15 @@
 """Specialized cognitive agents with distinct capabilities."""
-from typing import Dict, List, Set, Optional
+from typing import Dict, List, Set, Optional, Union
 from datetime import datetime
 from termcolor import colored
 import json
+import asyncio
+import hashlib
 
 from .cognitive_agent import CognitiveAgent
 from ..visualization.pattern_viz import PatternVisualizer
 from ..pattern_store.db import PatternStore
-from ..config import PATTERN_SETTINGS, CACHE_SETTINGS
+from ..config import PATTERN_SETTINGS, CACHE_SETTINGS, PROCESSING_SETTINGS
 
 class PatternError(Exception):
     """Base class for pattern-related errors."""
@@ -85,6 +87,7 @@ class PatternAnalyst(CognitiveAgent):
                         'thought': thought,
                         'patterns': [pattern]
                     })
+                    self.pattern_history.append(pattern)
                     stored_patterns.append(pattern)
                     
                 except Exception as e:
@@ -217,8 +220,18 @@ class PatternAnalyst(CognitiveAgent):
                 print(f"  Avg Age: {metrics['avg_age_days']:.1f} days")
             
             print(colored("📦 Using cached patterns", "green"))
+            
+            # Normalize cached patterns
+            normalized_patterns = []
+            for pattern in cached_patterns:
+                if isinstance(pattern, dict):
+                    if 'patterns' in pattern:
+                        normalized_patterns.extend(pattern['patterns'])
+                    elif all(k in pattern for k in ['category', 'theme', 'confidence']):
+                        normalized_patterns.append(pattern)
+            
             sequence_type = self._detect_sequence_type(thought)
-            return self._apply_weights(cached_patterns, sequence_type)
+            return self._apply_weights(normalized_patterns, sequence_type)
         
         try:
             # Normal AI-based detection
@@ -345,6 +358,64 @@ Return as JSON:
         
         result = json.loads(response.choices[0].message.content)
         return result.get('patterns', [])
+    
+    async def _process_entries(self, entries: List[str]) -> List[Dict]:
+        """Process entries in parallel while maintaining deep analysis."""
+        print(colored("\n🔄 Processing Entries in Parallel", "cyan"))
+        print(f"  Total entries: {len(entries)}")
+        
+        try:
+            # Input validation
+            if not entries:
+                print(colored("⚠️ No entries to process", "yellow"))
+                return []
+            
+            # Create tasks for parallel processing
+            tasks = []
+            for entry in entries:
+                try:
+                    task = self._find_new_patterns(entry)
+                    tasks.append(task)
+                except Exception as e:
+                    print(colored(f"⚠️ Failed to create task for entry: {str(e)}", "yellow"))
+            
+            if not tasks:
+                print(colored("❌ No valid tasks created", "red"))
+                return []
+            
+            # Execute all tasks concurrently with timeout
+            try:
+                results = await asyncio.gather(*tasks, return_exceptions=True)
+                
+                # Filter out exceptions and empty results
+                valid_results = []
+                for i, result in enumerate(results):
+                    if isinstance(result, Exception):
+                        print(colored(f"❌ Entry {i} failed: {str(result)}", "red"))
+                    elif result:
+                        valid_results.append(result)
+                
+                # Flatten results while preserving all patterns
+                all_patterns = [
+                    pattern 
+                    for result in valid_results 
+                    for pattern in result
+                ]
+                
+                print(f"  Total patterns found: {len(all_patterns)}")
+                if all_patterns:
+                    print(f"  Average patterns per entry: {len(all_patterns)/len(entries):.1f}")
+                
+                return all_patterns
+                
+            except asyncio.TimeoutError:
+                print(colored("❌ Parallel processing timed out", "red"))
+                return []
+                
+        except Exception as e:
+            print(colored(f"❌ Parallel processing error: {str(e)}", "red"))
+            print(colored(f"  Error type: {type(e).__name__}", "red"))
+            return []
 
 class EmotionalExplorer(CognitiveAgent):
     """Builds emotional context and understanding over time."""
@@ -503,20 +574,24 @@ class IntegrationSynthesizer(CognitiveAgent):
         """Find meaningful connections between patterns and emotions."""
         connections = []
         
-        # Get emotional context
-        primary_emotion = emotional_insights.get('primary_emotion')
+        # Get emotional context safely
         emotional_context = emotional_insights.get('emotional_context', {})
+        if not isinstance(emotional_context, dict):
+            emotional_context = {}
         
-        # Get patterns
+        # Get patterns safely
         patterns = pattern_insights.get('patterns', [])
+        if not isinstance(patterns, list):
+            patterns = []
         
         # Look for connections
         for pattern in patterns:
-            if emotional_context.get(pattern['theme']):
+            theme = pattern.get('theme', '')
+            if theme and emotional_context.get('situation'):
                 connections.append({
-                    'pattern': pattern['theme'],
-                    'emotion': primary_emotion,
-                    'context': emotional_context[pattern['theme']],
+                    'pattern': theme,
+                    'emotion': emotional_insights.get('primary_emotion'),
+                    'context': emotional_context.get('situation'),
                     'timestamp': datetime.now().isoformat()
                 })
         
@@ -581,3 +656,112 @@ class IntegrationSynthesizer(CognitiveAgent):
             })
         except Exception as e:
             print(colored(f"Error tracking evolution: {str(e)}", "red"))
+
+class CognitiveOrchestrator:
+    """Manages agent coordination and parallel processing."""
+    
+    def __init__(self):
+        self.pattern_analyst = PatternAnalyst()
+        self.emotional_explorer = EmotionalExplorer()
+        self.integration_synthesizer = IntegrationSynthesizer()
+    
+    async def process_thoughts(self, thoughts: Union[str, List[str]]) -> Dict:
+        """Process thoughts with automatic parallelization.
+        
+        Args:
+            thoughts: Single thought string or list of thoughts
+            
+        Returns:
+            Dict containing:
+            - For single thought: {"patterns": [], "emotions": {}, "synthesis": {}}
+            - For multiple thoughts: {"results": [{"thought": "", "patterns": [], ...}, ...]}
+        """
+        print(colored("\n🎭 Cognitive Processing", "cyan"))
+        
+        try:
+            # Single thought
+            if isinstance(thoughts, str):
+                print(f"Processing single thought: {thoughts[:50]}...")
+                return await self._process_single(thoughts)
+                
+            # Multiple thoughts
+            print(f"Processing {len(thoughts)} thoughts")
+            if len(thoughts) >= PROCESSING_SETTINGS['BATCH_THRESHOLD']:
+                print("Using batch processing")
+                return await self._process_batch(thoughts)
+            else:
+                print("Using sequential processing")
+                return await self._process_sequential(thoughts)
+                
+        except Exception as e:
+            print(colored(f"❌ Processing error: {str(e)}", "red"))
+            return {"error": str(e)}
+    
+    async def _process_single(self, thought: str) -> Dict:
+        """Process single thought with parallel agents."""
+        try:
+            # Create tasks
+            pattern_task = self.pattern_analyst._find_new_patterns(thought)
+            emotion_task = self.emotional_explorer._explore_emotional_depth(thought)
+            
+            # Use asyncio.wait_for instead of timeout in gather
+            patterns = await asyncio.wait_for(
+                pattern_task,
+                timeout=PROCESSING_SETTINGS['TIMEOUT']
+            )
+            emotions = await asyncio.wait_for(
+                emotion_task,
+                timeout=PROCESSING_SETTINGS['TIMEOUT']
+            )
+            
+            # Integration needs both results
+            synthesis = await self.integration_synthesizer.integrate(
+                patterns, emotions
+            )
+            
+            return {
+                "patterns": patterns,
+                "emotions": emotions,
+                "synthesis": synthesis
+            }
+            
+        except asyncio.TimeoutError:
+            print(colored("❌ Processing timeout", "red"))
+            return {}
+        except Exception as e:
+            print(colored(f"❌ Processing error: {str(e)}", "red"))
+            return {}
+    
+    async def _process_batch(self, thoughts: List[str]) -> Dict:
+        """Process multiple thoughts with entry parallelization."""
+        print(colored(f"\n📚 Processing Batch ({len(thoughts)} entries)", "cyan"))
+        
+        try:
+            # Process entries in parallel
+            pattern_results = await self.pattern_analyst._process_entries(thoughts)
+            
+            # Process each result through emotional and integration
+            all_results = []
+            for thought, patterns in zip(thoughts, pattern_results):
+                emotions = await self.emotional_explorer._explore_emotional_depth(thought)
+                synthesis = await self.integration_synthesizer.integrate(patterns, emotions)
+                all_results.append({
+                    "thought": thought,
+                    "patterns": patterns,
+                    "emotions": emotions,
+                    "synthesis": synthesis
+                })
+                
+            return {"results": all_results}
+            
+        except Exception as e:
+            print(colored(f"❌ Batch processing error: {str(e)}", "red"))
+            return {"results": []}
+    
+    async def _process_sequential(self, thoughts: List[str]) -> Dict:
+        """Process thoughts sequentially for small batches."""
+        results = []
+        for thought in thoughts:
+            result = await self._process_single(thought)
+            results.append(result)
+        return {"results": results}

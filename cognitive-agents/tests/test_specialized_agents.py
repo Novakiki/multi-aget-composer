@@ -1,13 +1,15 @@
-"""Test suite for specialized cognitive agents."""
-import pytest
+"""Tests for specialized cognitive agents."""
 from typing import Dict, List
+import pytest
 from cognitive_agents.agents.specialized_agents import (
     PatternAnalyst,
     EmotionalExplorer,
     IntegrationSynthesizer
 )
+from cognitive_agents.pattern_store.db import PatternStore
 from cognitive_agents.visualization.pattern_viz import PatternVisualizer
 from termcolor import colored
+import time
 
 @pytest.fixture(autouse=True)
 async def cleanup_db():
@@ -364,7 +366,7 @@ class TestPatternAdaptability:
                 # Process thoughts...
                 for thought in sequence:
                     result = await analyzer._find_new_patterns(thought)
-                    print(colored(f"\n📝 Entry:", "yellow"))
+                    print(colored(f"\n Entry:", "yellow"))
                     print(f"  Thought: {thought}")
                     print(f"  Patterns: {len(result)}")
                     for pattern in result:
@@ -400,3 +402,152 @@ class TestPatternAdaptability:
         except Exception as e:
             print(colored(f"Adaptability test failed: {str(e)}", "red"))
             raise
+
+@pytest.mark.asyncio
+class TestJournalAnalysis:
+    """Test pattern recognition in journal entries."""
+    
+    @pytest.fixture
+    async def analyzer(self):
+        return PatternAnalyst()
+    
+    async def test_journal_entries(self, analyzer):
+        """Test analysis of longer, natural journal entries."""
+        journal_entries = [
+            """Today was a mix of emotions. Started the project feeling overwhelmed 
+            by its scope, but as I began breaking it down into smaller pieces, 
+            things started clicking. Found myself getting excited about the 
+            possibilities, even though there's still so much uncertainty.""",
+            
+            """Spent the morning wrestling with a particularly challenging problem. 
+            Initially felt frustrated and stuck, going in circles. But then had 
+            this moment of clarity - stepped back, took a break, and when I 
+            returned, saw the solution from a completely different angle. It's 
+            interesting how often breakthroughs come after stepping away.""",
+            
+            """Looking back at the last few weeks, I can see a clear pattern in 
+            how I approach challenges. There's always this initial resistance, 
+            followed by gradual acceptance, and then usually a creative burst 
+            once I fully engage. Starting to understand my own process better."""
+        ]
+        
+        try:
+            analyzer = await analyzer
+            
+            print(colored("\n📔 Testing Journal Analysis", "cyan"))
+            
+            for entry in journal_entries:
+                print(colored("\n📝 Processing Entry:", "yellow"))
+                print(f"  {entry[:100]}...")
+                
+                patterns = await analyzer._find_new_patterns(entry)
+                
+                print(colored("\n🔍 Detected Patterns:", "green"))
+                for pattern in patterns:
+                    print(f"  • {pattern['category']}: {pattern['theme']} ({pattern['confidence']:.2f})")
+                
+                # Verify rich pattern detection
+                assert len(patterns) >= 3, "Should detect multiple patterns in rich text"
+                assert any(p['category'] == 'meta' for p in patterns), "Should detect meta patterns"
+                
+            # Analyze overall progression
+            analysis = await analyzer._analyze_pattern_correlations()
+            
+            print(colored("\n📊 Journal Analysis Summary:", "blue"))
+            if 'summary' in analysis:
+                total = sum(analysis['summary'].values())
+                for category, count in analysis['summary'].items():
+                    if count > 0:
+                        percentage = (count / total) * 100
+                        print(f"  {category.title()}: {count} ({percentage:.1f}%)")
+            
+            # Verify correlations
+            assert len(analysis['correlations']) > 0, "Should find pattern correlations"
+            
+        except Exception as e:
+            print(colored(f"Journal analysis failed: {str(e)}", "red"))
+            raise
+
+@pytest.mark.asyncio
+class TestBatchProcessing:
+    """Test batch processing capabilities."""
+    
+    @pytest.fixture
+    async def analyzer(self):
+        return PatternAnalyst()
+    
+    async def test_batch_performance(self, analyzer):
+        """Test that batch processing maintains pattern quality."""
+        # Await the analyzer fixture first
+        analyzer = await analyzer
+        
+        # Use same text for both to ensure fair comparison
+        text = "Starting project phase 1"
+        
+        # Get individual result
+        individual_result = await analyzer._find_new_patterns(text)
+        
+        # Get batch result
+        batch_result = await analyzer._process_entries([text])
+        
+        # Compare pattern quality
+        assert len(batch_result) == len(individual_result)
+        assert all(
+            p['category'] in [ip['category'] for ip in individual_result]
+            for p in batch_result
+        )
+        
+        # Add debug output
+        print("\n📊 Pattern Quality Comparison:")
+        print("Individual Patterns:")
+        for p in individual_result:
+            print(f"  • {p['category']}: {p['theme']} ({p['confidence']:.2f})")
+        print("\nBatch Patterns:")
+        for p in batch_result:
+            print(f"  • {p['category']}: {p['theme']} ({p['confidence']:.2f})")
+
+@pytest.mark.asyncio
+class TestParallelProcessing:
+    """Test parallel processing capabilities."""
+    
+    @pytest.fixture
+    async def analyzer(self):
+        return PatternAnalyst()
+    
+    async def test_parallel_processing(self, analyzer):
+        """Test parallel processing maintains deep analysis."""
+        analyzer = await analyzer
+        
+        entries = [
+            "Starting the project with careful planning",
+            "Making progress through systematic steps",
+            "Encountering challenges but staying focused",
+            "Finding solutions through collaboration",
+            "Reflecting on lessons learned"
+        ]
+        
+        # Process in parallel
+        parallel_results = await analyzer._process_entries(entries)
+        
+        # Process individually for comparison
+        individual_results = []
+        for entry in entries:
+            result = await analyzer._find_new_patterns(entry)
+            individual_results.extend(result)
+        
+        # Compare results
+        print("\n📊 Deep Analysis Comparison:")
+        print(f"Parallel Processing: {len(parallel_results)} patterns")
+        print(f"Individual Processing: {len(individual_results)} patterns")
+        
+        # Verify deep analysis is maintained
+        assert len(parallel_results) >= len(individual_results)
+        assert all(
+            any(
+                p['category'] == ip['category'] and 
+                p['confidence'] >= 0.7 and
+                len(p['evidence']) > 0
+                for ip in individual_results
+            )
+            for p in parallel_results
+        )

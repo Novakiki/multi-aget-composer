@@ -52,4 +52,14 @@ CACHE_SETTINGS = {
     'MIN_USE_COUNT': 2,         # Keep patterns used at least twice
     'MAX_CACHE_SIZE': 1000,     # Maximum patterns to store
     'METRICS_ENABLED': True     # Track hit/miss metrics
+}
+
+PROCESSING_SETTINGS = {
+    'PARALLEL_MODE': 'auto',  # 'auto', 'entry', 'agent', or 'none'
+    'BATCH_THRESHOLD': 3,     # When to use entry parallelization
+    'TIMEOUT': 30,           # Seconds before timeout
+    'MAX_CONCURRENT': 5,     # Maximum concurrent operations
+    'AGENT_DEPENDENCIES': {
+        'IntegrationSynthesizer': ['PatternAnalyst', 'EmotionalExplorer']
+    }
 } 
