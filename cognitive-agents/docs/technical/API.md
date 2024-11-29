@@ -1,5 +1,30 @@
 # API Documentation
 
+## Community Integration Endpoints
+
+### Pattern Sharing
+```python
+POST /api/community/patterns
+{
+    "pattern": {
+        "observation": str,
+        "context": dict,
+        "questions": list
+    }
+}
+```
+
+### Collective Understanding
+```python
+GET /api/community/understanding
+Returns:
+{
+    "shared_patterns": list,
+    "emerging_insights": list,
+    "collective_questions": list
+}
+```
+
 ## CognitiveOrchestrator
 
 ### process_thoughts()

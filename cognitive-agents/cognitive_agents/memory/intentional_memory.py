@@ -111,3 +111,17 @@ class IntentionalMemory:
         except Exception as e:
             print(colored(f"❌ Error classifying intent: {str(e)}", "red"))
             return 'insight'  # Safe default
+
+    async def integrate_understanding(self, thought: str):
+        """Allow natural integration of individual and collective."""
+        # Let understanding emerge
+        individual_insight = await self.emergent_space.observe(thought)
+        
+        # Share with collective
+        collective_response = await self.collective_wisdom.receive(individual_insight)
+        
+        # Allow natural evolution
+        return await self.emergent_space.evolve(
+            individual=individual_insight,
+            collective=collective_response
+        )

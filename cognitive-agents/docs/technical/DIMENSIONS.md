@@ -23,6 +23,19 @@ The system implements a three-dimensional agent architecture:
 - Meta-patterns reveal systemic insights
 - Evolution tracking shows pattern development
 
+## Consciousness-Community Dimension
+
+### Natural Flow
+- Individual insights emerge
+- Community wisdom develops
+- Understanding evolves naturally
+
+### Integration Points
+```python
+# How understanding flows
+Individual Insight → Natural Emergence → Community Wisdom → Evolution
+```
+
 ## Implementation Guidelines
 
 ### 1. Agent Creation
@@ -65,3 +78,45 @@ VALIDATION_FLOW = {
     }
 }
 ```
+
+# System Dimensions
+
+## Natural Pattern Space
+- Patterns emerge and evolve naturally
+- No predefined categories
+- Organic relationships form
+
+## Reflection Layer
+- System questions its understanding
+- Explores uncertainties actively
+- Learns from confusion
+
+## Integration Space
+- Holistic understanding develops
+- Patterns influence each other
+- Knowledge evolves as one
+
+## Pattern Evolution Dimensions
+
+### Core Concepts
+
+#### 1. Pattern Strength
+- Confidence score (0.0 - 1.0)
+- Occurrence count
+- Relationship density
+
+#### 2. Evolution Stages
+```python
+# How patterns progress
+def calculate_stage(pattern):
+    if pattern.confidence > 0.7:
+        return 'established'
+    elif pattern.confidence > 0.3:
+        return 'developing'
+    return 'emerging'
+```
+
+#### 3. Relationships
+- Direct matches (word overlap)
+- Semantic similarity (vector space)
+- Conceptual alignment (themes)

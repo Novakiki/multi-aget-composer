@@ -41,38 +41,21 @@ class CognitiveAgent(BaseAgent):
         
         print(colored(f"Cognitive Agent '{role}' initialized at depth {depth}", "green"))
 
-    async def process_thought(self, thought: str) -> Dict:
-        """Process thought with improved error handling and pattern tracking."""
-        try:
-            print(colored(f"\n[{self.role} processing at depth {self.depth}]", "cyan"))
-            
-            # Check depth limit
-            if self.depth >= self.max_depth:
-                print(colored("⚠️ Max depth reached", "yellow"))
-                return self._create_result_structure([], analysis=False)
-            
-            # Analyze thought
-            insight = await self._analyze_thought(thought)
-            if not insight:
-                return self._create_result_structure([], analysis=False)
-            
-            # Extract and standardize patterns
-            patterns = self._extract_patterns_from_insight(insight)
-            
-            # Filter by confidence
-            patterns = [p for p in patterns if p['confidence'] >= self.confidence_threshold]
-            
-            # Update pattern memory
-            self._update_pattern_memory(patterns)
-            
-            # Create result
-            result = self._create_result_structure(patterns, analysis=True)
-            
-            return result
-            
-        except Exception as e:
-            print(colored(f"❌ Error processing thought: {str(e)}", "red"))
-            return self._create_result_structure([], analysis=False)
+    async def process_thought(self, thought: str):
+        """Process with consciousness-community awareness."""
+        # Individual processing
+        individual_understanding = await self.understand(thought)
+        
+        # Community integration
+        collective_wisdom = await self.community_space.share(individual_understanding)
+        
+        # Natural evolution
+        evolved_understanding = await self.integrate(
+            individual_understanding,
+            collective_wisdom
+        )
+        
+        return evolved_understanding
 
     async def _analyze_thought(self, thought: str) -> Dict:
         """Analyze thought using AI to extract patterns and insights."""

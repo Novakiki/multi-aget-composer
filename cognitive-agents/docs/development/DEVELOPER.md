@@ -232,3 +232,18 @@ TECH_STACK = {
     - Professional network
     - Community moderation
 
+## Community Integration
+
+### Pattern Flow
+1. Individual insights emerge
+2. Community patterns form
+3. Collective understanding grows
+
+### Implementation Guidelines
+```python
+# When implementing features:
+1. Enable natural pattern sharing
+2. Support collective reflection
+3. Allow shared evolution
+```
+
