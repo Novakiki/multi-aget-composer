@@ -137,3 +137,8 @@ resonance_types = {
 - Questions evolve naturally
 - Communities form around shared curiosity
 - Understanding deepens collectively
+
+## Question Evolution Dimensions
+- Depth progression
+- Breadth expansion
+- Resonance calculation

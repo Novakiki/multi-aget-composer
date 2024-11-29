@@ -100,3 +100,8 @@ Is this alignment closer to your understanding?"
 - Shared understanding
 - Natural evolution
 - Better outcomes 
+
+# Add real examples of:
+- Question depth evolution
+- Natural breadth expansion
+- Resonance dimensions 

@@ -226,7 +226,7 @@ class QuestionEvolution:
             for stored_q in self.space['questions']['collective']:
                 if self._questions_resonate(question, stored_q):
                     pattern = {
-                        'type': 'collective_resonance',
+                        'type': 'collective_resonance', 
                         'content': stored_q['content'],
                         'resonance': self._calculate_resonance(question, stored_q),
                         'evolution': {
@@ -237,11 +237,6 @@ class QuestionEvolution:
                     }
                     patterns.append(pattern)
                     
-            # Let patterns emerge naturally
-            print(colored(f"\n🔍 Found {len(patterns)} natural patterns", "cyan"))
-            for p in patterns:
-                print(f"  • {p['type']}: {p['content']} (resonance: {p['resonance']:.2f})")
-                
             return patterns
             
         except Exception as e:

@@ -51,3 +51,9 @@ integration_path = {
     }
 }
 ```
+
+## Integration Status
+See [Implementation Status](../handoff/IMPLEMENTATION_STATUS.md) for current state.
+
+## Integration Points
+See [Handoff Overview](../handoff/HANDOFF.md) for connection points.

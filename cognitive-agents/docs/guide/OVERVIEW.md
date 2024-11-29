@@ -69,3 +69,8 @@ Level 3: "Python helps people learn programming concepts"
 - ✅ Can group similar ideas
 - 🚧 Working on: Growing smarter over time
 - 🚧 Working on: Making deeper connections
+
+For implementation status and next steps, see:
+- [Handoff Overview](../handoff/HANDOFF.md)
+- [Quick Start](../handoff/QUICK_START.md)
+- [Implementation Status](../handoff/IMPLEMENTATION_STATUS.md)
