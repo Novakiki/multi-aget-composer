@@ -7,15 +7,15 @@
    ```python
    EVENT_SYSTEM = {
        'core_events': {
-           'processing.start': 'Initial thought processing',
-           'pattern.discovered': 'New pattern identified',
-           'insight.emerged': 'Insight synthesis ready',
-           'dimension.needed': 'New processing dimension required'
+           'processing.start': 'Initial awareness of input',
+           'pattern.discovered': 'Recognition of meaningful patterns',
+           'insight.emerged': 'Integration into higher understanding',
+           'dimension.needed': 'Evolution of processing capacity'
        },
        'subscriptions': {
            'pattern_events': 'Pattern recognition and evolution',
-           'agent_events': 'Agent lifecycle and coordination',
-           'insight_events': 'Insight collection and synthesis'
+           'agent_events': 'Self-organizing coordination',
+           'insight_events': 'Meaning emergence and integration'
        }
    }
    ```
@@ -123,3 +123,19 @@ TECH_STACK = {
    - Language interop
    - Performance validation
    - System stability
+
+### Development Principles
+1. **Natural Emergence**
+   - Let patterns arise naturally
+   - Allow insights to self-organize
+   - Enable organic integration
+
+2. **Unified Processing**
+   - Integration across dimensions
+   - Coherent understanding
+   - Meaningful synthesis
+
+3. **Adaptive Evolution**
+   - System grows through experience
+   - Patterns build on patterns
+   - Understanding deepens naturally
