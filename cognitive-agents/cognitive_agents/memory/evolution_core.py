@@ -1,21 +1,28 @@
-from typing import Dict, List
-import os
-from neo4j import AsyncGraphDatabase
-from motor.motor_asyncio import AsyncIOMotorClient
-import pinecone
-from termcolor import colored
+from typing import Dict, List, Optional
 from datetime import datetime
+from termcolor import colored
+from cognitive_agents.memory.evolution_services import EvolutionServices
 
 class EvolutionCore:
-    """Core evolution engine using tri-database architecture."""
+    """Core evolution engine using service locator pattern."""
     
-    def __init__(self):
-        # Semantic Patterns (Pinecone)
-        pinecone.init(
-            api_key=os.getenv('PINECONE_API_KEY'),
-            environment=os.getenv('PINECONE_ENV')
-        )
-        self.pattern_index = pinecone.Index('pattern-evolution')
+    def __init__(self, services: Optional[EvolutionServices] = None):
+        self.services = services or EvolutionServices()
+        self._ensure_evolution_index()
+        
+    def _ensure_evolution_index(self):
+        """Ensure evolution index exists."""
+        if self.services.is_available('pinecone'):
+            pc = self.services.get_service('pinecone')
+            evolution_index = 'pattern-evolution'
+            
+            if evolution_index not in pc.list_indexes().names():
+                pc.create_index(
+                    name=evolution_index,
+                    dimension=384,
+                    metric='cosine'
+                )
+            self.pattern_index = pc.Index(evolution_index)
         
         # Knowledge Networks (Neo4j)
         self.graph_db = AsyncGraphDatabase.driver(
@@ -71,3 +78,77 @@ class EvolutionCore:
                 'updated_at': datetime.now()
             }
         })
+        
+    async def track_pattern(self, pattern: Dict, embedding: List[float]) -> str:
+        """Track pattern across all dimensions."""
+        try:
+            pattern_id = f"pat_{datetime.now().isoformat()}"
+            
+            # 1. Store semantic pattern
+            if self.services.is_available('pinecone'):
+                pc = self.services.get_service('pinecone')
+                pc.Index('pattern-evolution').upsert([
+                    (pattern_id, embedding, {
+                        'content': pattern['content'],
+                        'type': pattern['type'],
+                        'themes': pattern['themes']
+                    })
+                ])
+            
+            # 2. Create knowledge graph
+            if self.services.is_available('neo4j'):
+                async with self.services.get_service('neo4j').session() as session:
+                    await session.run("""
+                        CREATE (p:Pattern {
+                            id: $id, content: $content, type: $type
+                        })
+                    """, id=pattern_id, **pattern)
+                    
+                    for theme in pattern['themes']:
+                        await session.run("""
+                            MATCH (p:Pattern {id: $pattern_id})
+                            MERGE (t:Theme {name: $theme})
+                            CREATE (p)-[:HAS_THEME]->(t)
+                        """, pattern_id=pattern_id, theme=theme)
+            
+            # 3. Store evolution context
+            if self.services.is_available('mongodb'):
+                await self.services.get_service('mongodb').evolution.patterns.insert_one({
+                    '_id': pattern_id,
+                    'pattern': pattern,
+                    'evolution': {
+                        'stage': 'emerging',
+                        'history': [],
+                        'connections': []
+                    },
+                    'metadata': {
+                        'created_at': datetime.now(),
+                        'updated_at': datetime.now()
+                    }
+                })
+            
+            return pattern_id
+            
+        except Exception as e:
+            print(colored(f"❌ Pattern tracking error: {str(e)}", "red"))
+            raise
+            
+    async def find_similar_patterns(self, embedding: List[float], top_k: int = 5) -> List[Dict]:
+        """Find semantically similar patterns."""
+        if self.services.is_available('pinecone'):
+            pc = self.services.get_service('pinecone')
+            results = pc.Index('pattern-evolution').query(
+                vector=embedding,
+                top_k=top_k,
+                include_metadata=True
+            )
+            return results.matches
+        return []
+        
+    async def get_pattern_state(self, pattern_id: str) -> Dict:
+        """Get pattern's evolution state."""
+        if self.services.is_available('mongodb'):
+            mongo = self.services.get_service('mongodb')
+            state = await mongo.evolution.patterns.find_one({'_id': pattern_id})
+            return state['evolution'] if state else {'stage': 'unknown'}
+        return {'stage': 'unknown'}

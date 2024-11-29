@@ -10,50 +10,43 @@ class TestEvolutionCore:
     @pytest.fixture
     async def mock_stores(self):
         """Create mock stores with realistic responses."""
-        # Mock Pinecone
-        with patch('pinecone.init'), \
-             patch('pinecone.Index') as mock_index:
-            
-            # Simulate semantic matches
-            mock_index.query.return_value.matches = [
-                {
-                    'id': 'pat_1',
-                    'score': 0.85,
-                    'metadata': {
-                        'content': 'Learning through patterns',
-                        'themes': ['learning', 'patterns']
-                    }
+        # Mock Pinecone client
+        mock_pc = AsyncMock()
+        mock_pc.list_indexes.return_value.names.return_value = []
+        mock_pc.Index.return_value.query.return_value.matches = [
+            {
+                'id': 'pat_1',
+                'score': 0.85,
+                'metadata': {
+                    'content': 'Learning through patterns',
+                    'themes': ['learning', 'patterns']
                 }
-            ]
-            
-            # Mock Neo4j
-            mock_session = AsyncMock()
-            mock_session.run.return_value.single.return_value = {
-                'p': {'id': 'pat_1', 'content': 'Test pattern'},
-                'connections': [
-                    {
-                        'type': 'HAS_THEME',
-                        'node': {'name': 'learning'}
-                    }
-                ]
             }
-            
-            mock_graph = AsyncMock()
-            mock_graph.session.return_value.__aenter__.return_value = mock_session
-            
-            # Mock MongoDB
-            mock_mongo = AsyncMock()
-            mock_mongo.evolution.patterns = AsyncMock()
-            
-            return {
-                'pinecone': mock_index,
-                'neo4j': mock_graph,
-                'mongo': mock_mongo
-            }
+        ]
+        
+        mock_session = AsyncMock()
+        mock_session.run.return_value.single.return_value = {
+            'p': {'id': 'pat_1', 'content': 'Test pattern'},
+            'connections': [{'type': 'HAS_THEME', 'node': {'name': 'learning'}}]
+        }
+        
+        mock_graph = AsyncMock()
+        mock_graph.session.return_value.__aenter__.return_value = mock_session
+        
+        mock_mongo = AsyncMock()
+        mock_mongo.evolution.patterns = AsyncMock()
+        
+        # Return immediately
+        return {
+            'pinecone': mock_pc,
+            'neo4j': mock_graph,
+            'mongo': mock_mongo
+        }
             
     @pytest.fixture
     async def evolution(self, mock_stores):
         """Create evolution system with mocked stores."""
+        mock_stores = await mock_stores
         core = EvolutionCore()
         core.pattern_index = mock_stores['pinecone']
         core.graph_db = mock_stores['neo4j']
@@ -62,6 +55,8 @@ class TestEvolutionCore:
         
     async def test_natural_evolution(self, evolution):
         """Test natural pattern evolution across dimensions."""
+        evolution = await evolution
+        
         # Initial pattern
         pattern = {
             'content': 'Learning happens through pattern recognition',

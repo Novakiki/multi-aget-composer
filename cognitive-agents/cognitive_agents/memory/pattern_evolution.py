@@ -1,74 +1,8 @@
-from typing import Dict, List, Optional
+from typing import Dict, List
 from datetime import datetime
-import asyncpg
-import pinecone
 from termcolor import colored
-import os
-
-class EvolutionStore:
-    """Manages pattern evolution across PostgreSQL and Pinecone."""
-    
-    def __init__(self):
-        """Initialize store connections."""
-        # PostgreSQL pool
-        self.pg_pool = None
-        
-        # Pinecone initialization
-        pinecone.init(
-            api_key=os.getenv('PINECONE_API_KEY'),
-            environment=os.getenv('PINECONE_ENV')
-        )
-        self.index_name = 'pattern-evolution'
-        self.vector_dim = 384  # OpenAI ada-2 dimension
-        
-    async def initialize(self):
-        """Initialize connections and schemas."""
-        try:
-            # Initialize PostgreSQL
-            self.pg_pool = await asyncpg.create_pool(
-                user=os.getenv('PG_USER', 'evolution_user'),
-                password=os.getenv('PG_PASSWORD'),
-                database=os.getenv('PG_DB', 'evolution_db'),
-                host=os.getenv('PG_HOST', 'localhost')
-            )
-            
-            # Create PostgreSQL schema
-            async with self.pg_pool.acquire() as conn:
-                await conn.execute("""
-                    CREATE TABLE IF NOT EXISTS evolution_states (
-                        id SERIAL PRIMARY KEY,
-                        pattern_id TEXT NOT NULL,
-                        timestamp TIMESTAMPTZ NOT NULL,
-                        stage TEXT NOT NULL,
-                        metrics JSONB,
-                        metadata JSONB
-                    )
-                """)
-                
-                await conn.execute("""
-                    CREATE TABLE IF NOT EXISTS pattern_themes (
-                        pattern_id TEXT NOT NULL,
-                        theme TEXT NOT NULL,
-                        strength FLOAT,
-                        timestamp TIMESTAMPTZ NOT NULL,
-                        PRIMARY KEY (pattern_id, theme)
-                    )
-                """)
-            
-            # Initialize Pinecone
-            if self.index_name not in pinecone.list_indexes():
-                pinecone.create_index(
-                    name=self.index_name,
-                    dimension=self.vector_dim,
-                    metric='cosine'
-                )
-            self.index = pinecone.Index(self.index_name)
-            
-            print(colored("✅ Evolution store initialized", "green"))
-            
-        except Exception as e:
-            print(colored(f"❌ Store initialization error: {str(e)}", "red"))
-            raise
+from cognitive_agents.memory.evolution_core import EvolutionCore
+from cognitive_agents.memory.evolution_services import EvolutionServices
 
 class PatternEvolution:
     """Enhanced pattern evolution using tri-database architecture."""

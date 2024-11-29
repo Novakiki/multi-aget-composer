@@ -5,89 +5,91 @@ from datetime import datetime
 from termcolor import colored
 from cognitive_agents.memory.evolution_store import EvolutionStore
 from cognitive_agents.memory.pattern_evolution import PatternEvolution
+from cognitive_agents.memory.evolution_core import EvolutionCore, EvolutionServices
 
 @pytest.mark.asyncio
 class TestHybridEvolution:
     @pytest.fixture
-    async def mock_db(self):
-        """Create mock database connection."""
-        conn = AsyncMock()
-        conn.fetchrow = AsyncMock(return_value={
-            'id': 1,
-            'stage': 'emerging',
-            'pattern_id': 'test_id'
-        })
-        conn.fetch = AsyncMock(return_value=[
-            {'theme': 'learning'},
-            {'theme': 'patterns'}
-        ])
-        
-        @asynccontextmanager
-        async def _acquire():
-            yield conn
-            
-        pool = AsyncMock()
-        pool.acquire = _acquire
-        return pool
-        
-    @pytest.fixture
-    async def store(self, mock_db):
-        """Create test store with mocked connections."""
-        with patch('pinecone.init'), \
-             patch('pinecone.list_indexes', return_value=[]), \
-             patch('pinecone.create_index'), \
-             patch('pinecone.Index') as mock_index:
-            
-            store = EvolutionStore()
-            store.index = mock_index
-            store.pg_pool = AsyncMock()
-            store.pg_pool.acquire = asynccontextmanager(lambda: mock_db)()
-            
-            return store
-            
-    @pytest.fixture
-    async def evolution(self, store):
-        """Create pattern evolution manager."""
-        store = await store
-        return PatternEvolution(store)
-        
-    async def test_pattern_lifecycle(self, evolution):
-        """Test complete pattern evolution lifecycle."""
-        evolution = await evolution
-        
-        # Initial pattern
-        pattern = {
-            'content': 'Learning happens through pattern recognition',
-            'type': 'insight',
-            'themes': [
-                {'name': 'learning', 'strength': 0.8},
-                {'name': 'patterns', 'strength': 0.7}
-            ]
+    async def evolution_services(self):
+        """Create test services."""
+        config = {
+            'pinecone': {'api_key': 'test-key', 'environment': 'test'},
+            'neo4j': {'uri': 'test', 'user': 'test', 'password': 'test'},
+            'mongodb': {'uri': 'test'}
         }
-        embedding = [0.1] * 384  # Test embedding
         
-        print(colored("\n🧬 Testing Pattern Evolution:", "cyan"))
+        # Configure mock responses
+        mock_pc = AsyncMock()
+        mock_index_list = Mock()
+        mock_index_list.names = Mock(return_value=['pattern-evolution'])
+        mock_pc.list_indexes = Mock(return_value=mock_index_list)
+        
+        mock_pc.Index.return_value.query.return_value.matches = [
+            {'id': 'test_1', 'score': 0.9, 'metadata': {'themes': ['learning']}}
+        ]
+        
+        mock_neo4j = AsyncMock()
+        mock_neo4j.session.return_value.__aenter__.return_value.run.return_value = [
+            {'pattern': {'id': 'test_1'}, 'themes': ['learning']}
+        ]
+        
+        mock_mongo = AsyncMock()
+        mock_mongo.evolution.patterns.find_one.return_value = {
+            'stage': 'emerging',
+            'history': []
+        }
+        
+        services = EvolutionServices(config)
+        services._services = {
+            'pinecone': mock_pc,
+            'neo4j': mock_neo4j,
+            'mongodb': mock_mongo
+        }
+        return services
+        
+    async def test_natural_evolution(self, evolution_services):
+        """Test natural pattern evolution."""
+        services = await evolution_services  # Await the fixture
+        core = EvolutionCore(services)
+        
+        # Test pattern creation
+        pattern = {
+            'content': 'Learning happens naturally',
+            'type': 'insight',
+            'themes': ['learning', 'evolution']
+        }
+        embedding = [0.1] * 384
         
         # Track pattern
-        result = await evolution.track_pattern(pattern, embedding)
-        print(f"  • Pattern ID: {result['id']}")
-        assert result['status'] == 'tracked'
+        pattern_id = await core.track_pattern(pattern, embedding)
+        assert pattern_id.startswith('pat_')
         
-        # Verify PostgreSQL storage
-        async with evolution.store.pg_pool.acquire() as conn:
-            row = await conn.fetchrow(
-                "SELECT * FROM evolution_states WHERE pattern_id = $1",
-                result['id']
-            )
-            assert row['stage'] == 'emerging'
-            
-            themes = await conn.fetch(
-                "SELECT * FROM pattern_themes WHERE pattern_id = $1",
-                result['id']
-            )
-            assert len(themes) == 2
-            
-        # Verify Pinecone storage
-        evolution.store.index.upsert.assert_called_once()
+        # Test pattern retrieval
+        similar = await core.find_similar_patterns(embedding)
+        assert len(similar) > 0
+        assert similar[0]['score'] > 0.8
         
-        print("  • Storage: ✅ PostgreSQL  ✅ Pinecone")
+        # Test evolution state
+        state = await core.get_pattern_state(pattern_id)
+        assert state['stage'] == 'emerging'
+        
+    async def test_partial_availability(self, evolution_services):
+        """Test with only some services available."""
+        services = await evolution_services  # Await the fixture
+        services._services.pop('mongodb')
+        core = EvolutionCore(services)
+        
+        pattern = {
+            'content': 'Learning with partial services',
+            'type': 'insight',
+            'themes': ['learning']
+        }
+        embedding = [0.1] * 384
+        
+        # Should still work with available services
+        pattern_id = await core.track_pattern(pattern, embedding)
+        assert pattern_id.startswith('pat_')
+        
+        # MongoDB operations should gracefully handle unavailability
+        state = await core.get_pattern_state(pattern_id)
+        assert state['stage'] == 'unknown'

@@ -1,6 +1,11 @@
+pinecone-client
+neo4j
+motor
+pymongo
+asyncpg
 click
 termcolor
-openai
 pytest
 pytest-asyncio
+pytest-mock
 watchdog

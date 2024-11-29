@@ -1,9 +1,14 @@
 Metadata-Version: 2.1
-Name: cognitive-agents
-Version: 0.1.0
+Name: cognitive_agents
+Version: 0.1
+Requires-Dist: pinecone-client
+Requires-Dist: neo4j
+Requires-Dist: motor
+Requires-Dist: pymongo
+Requires-Dist: asyncpg
 Requires-Dist: click
 Requires-Dist: termcolor
-Requires-Dist: openai
 Requires-Dist: pytest
 Requires-Dist: pytest-asyncio
+Requires-Dist: pytest-mock
 Requires-Dist: watchdog
