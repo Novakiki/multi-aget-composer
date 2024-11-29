@@ -12,6 +12,8 @@ from ..visualization.pattern_viz import PatternVisualizer
 from ..pattern_store.db import PatternStore
 from ..config import PATTERN_SETTINGS, CACHE_SETTINGS, PROCESSING_SETTINGS
 from ..openai_client import AsyncOpenAI
+from sentence_transformers import SentenceTransformer
+import numpy as np
 
 class PatternError(Exception):
     """Base class for pattern-related errors."""
@@ -30,15 +32,110 @@ class PatternStorageError(PatternError):
     pass
 
 class PatternAnalyst(CognitiveAgent):
-    """Specialized agent for pattern analysis."""
+    """Specialized agent for deep pattern analysis and evolution tracking."""
     
     def __init__(self):
         super().__init__("Pattern Analyst", depth=1)
         self.client = AsyncOpenAI()
         self.pattern_history = []
-        self.store = PatternStore()
-        self.reset_state()
+        self.pattern_evolution = {
+            'themes': {},      # Track theme development
+            'transitions': [], # Pattern transitions
+            'meta': set()     # Meta-patterns
+        }
         
+    async def analyze_pattern_sequence(self, thoughts: List[str]) -> Dict:
+        """Analyze sequence of thoughts for pattern evolution."""
+        try:
+            sequence_patterns = []
+            for thought in thoughts:
+                # Get patterns for this thought
+                patterns = await self._find_new_patterns(thought)
+                sequence_patterns.append({
+                    'thought': thought,
+                    'patterns': patterns,
+                    'timestamp': datetime.now().isoformat()
+                })
+                
+                # Track theme evolution
+                self._update_theme_evolution(patterns)
+                
+                # Track transitions
+                if len(sequence_patterns) > 1:
+                    self._track_pattern_transition(
+                        sequence_patterns[-2]['patterns'],
+                        patterns
+                    )
+            
+            # Generate meta-insights
+            meta_insights = self._synthesize_meta_patterns(sequence_patterns)
+            
+            return {
+                'sequence_patterns': sequence_patterns,
+                'theme_evolution': self.pattern_evolution['themes'],
+                'transitions': self.pattern_evolution['transitions'],
+                'meta_insights': list(meta_insights)
+            }
+            
+        except Exception as e:
+            print(colored(f"❌ Error in sequence analysis: {str(e)}", "red"))
+            return {}
+            
+    def _update_theme_evolution(self, patterns: List[Dict]) -> None:
+        """Track how themes evolve over time."""
+        for pattern in patterns:
+            theme = pattern.get('theme')
+            if not theme:
+                continue
+                
+            if theme not in self.pattern_evolution['themes']:
+                self.pattern_evolution['themes'][theme] = {
+                    'first_seen': datetime.now().isoformat(),
+                    'occurrences': 0,
+                    'confidence_history': [],
+                    'related_patterns': set()
+                }
+                
+            theme_data = self.pattern_evolution['themes'][theme]
+            theme_data['occurrences'] += 1
+            theme_data['confidence_history'].append(pattern.get('confidence', 0))
+            theme_data['related_patterns'].add(pattern.get('content'))
+            
+    def _track_pattern_transition(
+        self,
+        previous_patterns: List[Dict],
+        current_patterns: List[Dict]
+    ) -> None:
+        """Track how patterns transition and evolve."""
+        for prev in previous_patterns:
+            for curr in current_patterns:
+                if self._patterns_are_related(prev, curr):
+                    transition = {
+                        'from_pattern': prev['content'],
+                        'to_pattern': curr['content'],
+                        'timestamp': datetime.now().isoformat(),
+                        'confidence': min(
+                            prev.get('confidence', 0),
+                            curr.get('confidence', 0)
+                        )
+                    }
+                    self.pattern_evolution['transitions'].append(transition)
+                    
+    def _patterns_are_related(self, pattern1: Dict, pattern2: Dict) -> bool:
+        """Check if two patterns are related."""
+        # Get words from each pattern
+        words1 = set(pattern1.get('content', '').lower().split())
+        words2 = set(pattern2.get('content', '').lower().split())
+        
+        # Calculate overlap
+        overlap = len(words1.intersection(words2))
+        overlap_ratio = overlap / min(len(words1), len(words2))
+        
+        # Check theme relationship
+        same_type = pattern1.get('type') == pattern2.get('type')
+        
+        return overlap_ratio >= 0.3 or same_type
+    
     def reset_state(self):
         """Reset agent state between sequences while preserving cache."""
         self.pattern_history = []
@@ -720,3 +817,183 @@ class CognitiveOrchestrator:
             result = await self._process_single(thought)
             results.append(result)
         return {"results": results}
+
+class HybridPatternAnalyst(PatternAnalyst):
+    """Enhanced pattern analyst with hybrid symbolic-vector analysis."""
+    
+    def __init__(self):
+        super().__init__()
+        # Initialize vector model
+        self.semantic_model = SentenceTransformer('all-MiniLM-L6-v2')
+        # Add vector storage
+        self.vector_memory = {
+            'embeddings': [],  # Store vectors
+            'thoughts': [],    # Store original thoughts
+            'timestamps': []   # Store when added
+        }
+        
+    async def analyze_thought(self, thought: str) -> Dict:
+        """Analyze thought using both symbolic and vector approaches."""
+        try:
+            print(colored("\n🔍 Starting hybrid analysis...", "cyan"))
+            
+            # 1. Traditional pattern analysis
+            symbolic_patterns = await self._find_new_patterns(thought)
+            print(colored(f"Found {len(symbolic_patterns)} symbolic patterns", "green"))
+            
+            # 2. Vector analysis
+            vector = self.semantic_model.encode(thought)
+            self._store_vector(vector, thought)
+            similar_thoughts = self._find_similar_thoughts(vector)
+            print(colored(f"Found {len(similar_thoughts)} similar thoughts", "green"))
+            
+            # Create proper result structure
+            result = {
+                'patterns': symbolic_patterns,
+                'similar_thoughts': similar_thoughts,  # Make sure this exists
+                'synthesis': {
+                    'interpretable_insights': [],
+                    'semantic_connections': [],
+                    'explanation': ''
+                }
+            }
+            
+            # Add insights from patterns
+            for pattern in symbolic_patterns:
+                result['synthesis']['interpretable_insights'].append({
+                    'type': pattern['type'],
+                    'content': pattern['content'],
+                    'confidence': pattern['confidence'],
+                    'explanation': f"Pattern found: {pattern['type']}"
+                })
+            
+            # Add semantic connections
+            for similar in similar_thoughts:
+                result['synthesis']['semantic_connections'].append({
+                    'thought': similar['thought'],
+                    'similarity': similar['score'],
+                    'explanation': f"Semantic similarity: {similar['score']:.2f}"
+                })
+            
+            return result
+            
+        except Exception as e:
+            print(colored(f"❌ Error in hybrid analysis: {str(e)}", "red"))
+            # Return valid structure even on error
+            return {
+                'patterns': [],
+                'similar_thoughts': [],
+                'synthesis': {
+                    'interpretable_insights': [],
+                    'semantic_connections': [],
+                    'explanation': f"Analysis error: {str(e)}"
+                }
+            }
+    
+    def _store_vector(self, vector: np.ndarray, thought: str) -> None:
+        """Store vector with metadata."""
+        self.vector_memory['embeddings'].append(vector)
+        self.vector_memory['thoughts'].append(thought)
+        self.vector_memory['timestamps'].append(datetime.now().isoformat())
+        
+    def _find_similar_thoughts(self, query_vector: np.ndarray) -> List[Dict]:
+        """Find similar thoughts using vector similarity."""
+        if not self.vector_memory['embeddings']:
+            return []
+            
+        # Calculate similarities
+        similarities = [
+            np.dot(query_vector, stored_vec) 
+            for stored_vec in self.vector_memory['embeddings']
+        ]
+        
+        # Get top matches
+        matches = []
+        for i, score in enumerate(similarities):
+            if score > 0.7:  # Similarity threshold
+                matches.append({
+                    'thought': self.vector_memory['thoughts'][i],
+                    'score': float(score),
+                    'timestamp': self.vector_memory['timestamps'][i]
+                })
+                
+        return sorted(matches, key=lambda x: x['score'], reverse=True)
+        
+    def _combine_analyses(
+        self,
+        symbolic_patterns: List[Dict],
+        similar_thoughts: List[Dict],
+        current_thought: str
+    ) -> Dict:
+        """Combine symbolic and vector analyses with explanations."""
+        combined = {
+            'patterns': symbolic_patterns,
+            'similar_thoughts': similar_thoughts,
+            'synthesis': {
+                'interpretable_insights': [],
+                'semantic_connections': [],
+                'explanation': ''
+            }
+        }
+        
+        # Add interpretable insights
+        for pattern in symbolic_patterns:
+            insight = {
+                'type': pattern['type'],
+                'content': pattern['content'],
+                'confidence': pattern['confidence'],
+                'explanation': f"Recognized through {pattern['type']} pattern matching"
+            }
+            combined['synthesis']['interpretable_insights'].append(insight)
+        
+        # Add semantic connections
+        for match in similar_thoughts:
+            connection = {
+                'thought': match['thought'],
+                'similarity': match['score'],
+                'explanation': f"Semantically similar with {match['score']:.2f} confidence"
+            }
+            combined['synthesis']['semantic_connections'].append(connection)
+        
+        # Generate overall explanation
+        combined['synthesis']['explanation'] = self._generate_synthesis_explanation(
+            symbolic_patterns,
+            similar_thoughts
+        )
+        
+        return combined
+    
+    def _generate_synthesis_explanation(
+        self,
+        symbolic_patterns: List[Dict],
+        similar_thoughts: List[Dict]
+    ) -> str:
+        """Generate human-readable synthesis explanation."""
+        try:
+            explanations = []
+            
+            # Explain symbolic patterns
+            if symbolic_patterns:
+                pattern_types = set(p['type'] for p in symbolic_patterns)
+                explanations.append(
+                    f"Found {len(symbolic_patterns)} patterns "
+                    f"of types: {', '.join(pattern_types)}"
+                )
+            
+            # Explain semantic connections
+            if similar_thoughts:
+                top_match = similar_thoughts[0]
+                explanations.append(
+                    f"Most similar previous thought "
+                    f"(similarity: {top_match['score']:.2f}): "
+                    f"{top_match['thought']}"
+                )
+            
+            # Combine explanations
+            if explanations:
+                return "\n".join(explanations)
+            return "No significant patterns or similarities found."
+            
+        except Exception as e:
+            print(colored(f"❌ Error generating explanation: {str(e)}", "red"))
+            return "Error generating explanation."

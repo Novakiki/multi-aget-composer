@@ -551,3 +551,80 @@ class TestParallelProcessing:
             )
             for p in parallel_results
         )
+
+@pytest.mark.asyncio
+class TestPatternEvolution:
+    """Test pattern evolution and sequence analysis capabilities."""
+    
+    @pytest.fixture
+    async def analyst(self):
+        return PatternAnalyst()
+    
+    async def test_sequence_analysis(self, analyst):
+        """Test analysis of thought sequences."""
+        thoughts = [
+            "I feel nervous about change",
+            "Starting to understand why change makes me nervous",
+            "Noticing a pattern in how I respond to change"
+        ]
+        
+        result = await analyst.analyze_pattern_sequence(thoughts)
+        
+        # Verify structure
+        assert 'sequence_patterns' in result
+        assert 'theme_evolution' in result
+        assert 'transitions' in result
+        assert 'meta_insights' in result
+        
+        # Verify sequence tracking
+        assert len(result['sequence_patterns']) == len(thoughts)
+        
+        # Verify theme evolution
+        themes = result['theme_evolution']
+        assert len(themes) > 0
+        for theme_data in themes.values():
+            assert 'first_seen' in theme_data
+            assert 'occurrences' in theme_data
+            assert 'confidence_history' in theme_data
+            
+    async def test_pattern_transitions(self, analyst):
+        """Test pattern transition tracking."""
+        thoughts = [
+            "Change makes me nervous",
+            "I'm learning to handle change",
+            "Starting to see change as opportunity"
+        ]
+        
+        result = await analyst.analyze_pattern_sequence(thoughts)
+        
+        # Verify transitions
+        transitions = result['transitions']
+        assert len(transitions) > 0
+        for transition in transitions:
+            assert 'from_pattern' in transition
+            assert 'to_pattern' in transition
+            assert 'confidence' in transition
+            
+        # Verify progression
+        assert len(result['meta_insights']) > 0
+        
+    async def test_theme_tracking(self, analyst):
+        """Test theme evolution tracking."""
+        thoughts = [
+            "I worry about failure",
+            "Failure is part of learning",
+            "Learning from failure makes me stronger"
+        ]
+        
+        result = await analyst.analyze_pattern_sequence(thoughts)
+        themes = result['theme_evolution']
+        
+        # Check theme progression
+        assert any('failure' in theme.lower() for theme in themes)
+        assert any('learning' in theme.lower() for theme in themes)
+        
+        # Check theme data
+        for theme_data in themes.values():
+            assert theme_data['occurrences'] > 0
+            assert len(theme_data['confidence_history']) > 0
+            assert len(theme_data['related_patterns']) > 0
