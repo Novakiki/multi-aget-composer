@@ -12,6 +12,7 @@ setup(
         'motor',
         'pymongo',
         'asyncpg',
+        'openai>=1.0.0',
         'click',
         'termcolor',
         'pytest',

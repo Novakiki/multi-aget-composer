@@ -6,6 +6,7 @@ Requires-Dist: neo4j
 Requires-Dist: motor
 Requires-Dist: pymongo
 Requires-Dist: asyncpg
+Requires-Dist: openai>=1.0.0
 Requires-Dist: click
 Requires-Dist: termcolor
 Requires-Dist: pytest
