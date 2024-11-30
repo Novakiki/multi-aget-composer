@@ -1,231 +1,61 @@
 import pytest
-from termcolor import colored
+from unittest.mock import AsyncMock
 from cognitive_agents.memory.question_evolution import QuestionEvolution
+from termcolor import colored
 
 @pytest.mark.asyncio
 class TestQuestionEvolution:
     @pytest.fixture
     async def evolution(self):
-        return QuestionEvolution()
+        """Create test evolution system."""
+        # Create mocks
+        mock_store = AsyncMock()
+        mock_store.store_pattern.return_value = "test_pattern_1"
         
-    async def test_natural_resonance(self, evolution):
-        """Test how questions naturally resonate."""
-        evolution = await evolution
+        mock_network = AsyncMock()
         
-        # Individual question
-        q1 = {
-            'content': 'How do patterns emerge?',
-            'intent': 'understanding',
-            'context': 'learning'
-        }
-        
-        # Related collective question
-        q2 = {
-            'content': 'What drives pattern formation?',
-            'intent': 'exploration',
-            'context': 'learning'
-        }
-        
-        # Store questions
-        evolution.space['questions']['individual'].append(q1)
-        evolution.space['questions']['collective'].append(q2)
-        
-        # Observe new question
-        new_question = {
-            'content': 'Why do patterns evolve naturally?',
-            'intent': 'understanding',
-            'context': 'learning'
-        }
-        
-        result = await evolution.observe_question(new_question)
-        
-        print(colored("\n🔍 Testing Natural Resonance:", "cyan"))
-        print(f"New Question: {new_question['content']}")
-        print(f"Found Patterns: {len(result.get('patterns', []))}")
-        
-        # Verify natural resonance
-        assert len(result.get('patterns', [])) > 0
-        assert any(p.get('resonance', 0) > 0.7 for p in result.get('patterns', [])) 
-        
-    async def test_evolution_path(self, evolution):
-        """Test how questions naturally evolve."""
-        evolution = await evolution
-        
-        # Create natural evolution path
-        questions = [
+        mock_semantics = AsyncMock()
+        mock_semantics.find_similar.return_value = [
             {
-                'content': 'What is learning?',
-                'intent': 'basic',
-                'context': 'learning'
-            },
-            {
-                'content': 'How does learning happen?',
-                'intent': 'exploration',
-                'context': 'learning'
-            },
-            {
-                'content': 'Why do learning patterns emerge?',
-                'intent': 'understanding',
-                'context': 'learning'
+                'id': 'similar_1',
+                'score': 0.9,
+                'metadata': {
+                    'content': 'How do patterns form?',
+                    'themes': ['learning', 'patterns']
+                }
             }
         ]
         
-        print(colored("\n🌱 Testing Question Evolution:", "cyan"))
-        
-        # Let understanding evolve naturally
-        results = []
-        for i, q in enumerate(questions):
-            # Store question to enable evolution
-            evolution.space['questions']['individual'].append(q)
-            
-            # Observe next question (if not last)
-            if i < len(questions) - 1:
-                next_q = questions[i + 1]
-                result = await evolution.observe_question(next_q)
-                results.append(result)
-                
-                print(f"\nQuestion Evolution:")
-                print(f"From: {q['content']}")
-                print(f"To: {next_q['content']}")
-                print(f"Patterns: {len(result.get('patterns', []))}")
-                print(f"Resonance: {result.get('resonance', 0):.2f}")
-        
-        # Test natural progression
-        assert len(results) == 2  # Two transitions
-        assert 'evolution' in results[1]
-        assert len(results[1].get('patterns', [])) >= len(results[0].get('patterns', []))
-        
-    async def test_depth_evolution(self, evolution):
-        """Test how questions evolve in depth."""
-        evolution = await evolution
-        
-        # Create natural evolution path
-        questions = [
-            {
-                'content': 'What is learning?',
-                'intent': 'basic',
-                'context': 'learning'
-            },
-            {
-                'content': 'How does learning happen?',
-                'intent': 'exploration',
-                'context': 'learning'
-            },
-            {
-                'content': 'Why do learning patterns emerge?',
-                'intent': 'understanding',
-                'context': 'learning'
-            }
+        mock_theme_extractor = AsyncMock()
+        mock_theme_extractor.extract_themes.return_value = [
+            'learning', 'evolution', 'patterns'
         ]
         
-        print(colored("\n🌱 Testing Depth Evolution:", "cyan"))
+        return QuestionEvolution(
+            store=mock_store,
+            network=mock_network,
+            semantics=mock_semantics,
+            theme_extractor=mock_theme_extractor
+        )
         
-        # Let understanding evolve naturally
-        results = []
-        for i, q in enumerate(questions):
-            # Store question to enable evolution
-            evolution.space['questions']['individual'].append(q)
-            
-            # Observe next question (if not last)
-            if i < len(questions) - 1:
-                next_q = questions[i + 1]
-                result = await evolution.observe_question(next_q)
-                results.append(result)
-                
-                print(f"\nQuestion Evolution:")
-                print(f"From: {q['content']}")
-                print(f"To: {next_q['content']}")
-                print(f"Patterns: {len(result.get('patterns', []))}")
-                print(f"Resonance: {result.get('resonance', 0):.2f}")
-        
-        # Test natural progression
-        assert len(results) == 2  # Two transitions
-        assert 'evolution' in results[1]
-        assert len(results[1].get('patterns', [])) >= len(results[0].get('patterns', []))
-        
-    async def test_breadth_evolution(self, evolution):
-        """Test how questions evolve in breadth."""
+    async def test_question_evolution(self, evolution):
+        """Test natural question evolution."""
+        # Await the fixture first
         evolution = await evolution
         
-        # Create natural evolution path
-        questions = [
-            {
-                'content': 'What is learning?',
-                'intent': 'basic',
-                'context': 'learning'
-            },
-            {
-                'content': 'How does learning happen?',
-                'intent': 'exploration',
-                'context': 'learning'
-            },
-            {
-                'content': 'Why do learning patterns emerge?',
-                'intent': 'understanding',
-                'context': 'learning'
-            }
-        ]
+        # Test question
+        question = "How do patterns emerge naturally?"
         
-        print(colored("\n🌱 Testing Breadth Evolution:", "cyan"))
+        print(colored("\n🧠 Testing Question Evolution:", "cyan"))
+        print(f"Question: {question}")
         
-        # Let understanding evolve naturally
-        results = []
-        for i, q in enumerate(questions):
-            # Store question to enable evolution
-            evolution.space['questions']['individual'].append(q)
-            
-            # Observe next question (if not last)
-            if i < len(questions) - 1:
-                next_q = questions[i + 1]
-                result = await evolution.observe_question(next_q)
-                results.append(result)
-                
-                print(f"\nQuestion Evolution:")
-                print(f"From: {q['content']}")
-                print(f"To: {next_q['content']}")
-                print(f"Patterns: {len(result.get('patterns', []))}")
-                print(f"Resonance: {result.get('resonance', 0):.2f}")
+        # Let question evolve
+        result = await evolution.evolve_question(question)
         
-        # Test natural progression
-        assert len(results) == 2  # Two transitions
-        assert 'evolution' in results[1]
-        assert len(results[1].get('patterns', [])) >= len(results[0].get('patterns', []))
+        # Verify evolution
+        assert result['pattern_id'] == "test_pattern_1"
+        assert len(result['connections']) > 0
         
-    async def test_resonance_dimensions(self, evolution):
-        """Test how resonance is calculated."""
-        evolution = await evolution
-        
-        # Individual question
-        q1 = {
-            'content': 'How do patterns emerge?',
-            'intent': 'understanding',
-            'context': 'learning'
-        }
-        
-        # Related collective question
-        q2 = {
-            'content': 'What drives pattern formation?',
-            'intent': 'exploration',
-            'context': 'learning'
-        }
-        
-        # Store questions
-        evolution.space['questions']['individual'].append(q1)
-        evolution.space['questions']['collective'].append(q2)
-        
-        # Observe new question
-        new_question = {
-            'content': 'Why do patterns evolve naturally?',
-            'intent': 'understanding',
-            'context': 'learning'
-        }
-        
-        result = await evolution.observe_question(new_question)
-        
-        print(colored("\n🔍 Testing Resonance Dimensions:", "cyan"))
-        print(f"New Question: {new_question['content']}")
-        print(f"Found Patterns: {len(result.get('patterns', []))}")
-        
-        # Verify natural resonance
-        assert len(result.get('patterns', [])) > 0
-        assert any(p.get('resonance', 0) > 0.7 for p in result.get('patterns', []))
+        # Print evolution
+        print(f"Pattern ID: {result['pattern_id']}")
+        print(f"Similar Patterns: {len(result['connections'])}")

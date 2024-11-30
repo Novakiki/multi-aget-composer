@@ -105,3 +105,31 @@ Is this alignment closer to your understanding?"
 - Question depth evolution
 - Natural breadth expansion
 - Resonance dimensions 
+
+# Question Evolution Examples
+
+## Natural Question Flow
+```python
+# Ask a question
+question = "How do patterns emerge naturally?"
+result = await evolution.evolve_question(question)
+
+# Result contains:
+{
+    'pattern_id': 'pat_123',
+    'insights': [
+        {
+            'type': 'connection',
+            'content': 'How do patterns form?',
+            'themes': ['learning', 'patterns'],
+            'score': 0.9
+        }
+    ],
+    'connections': [...]
+}
+```
+
+## Applications
+1. Learning Systems
+2. Pattern Discovery
+3. Knowledge Evolution 
