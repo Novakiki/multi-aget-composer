@@ -22,7 +22,7 @@ setup(
     ],
     entry_points={
         'console_scripts': [
-            'cognitive=cognitive_agents.cli:cli'
+            'evolve=cognitive_agents.cli:cli'
         ],
     }
 ) 

@@ -1,122 +1,83 @@
-"""Interactive CLI for cognitive agents."""
+"""Evolution System CLI."""
+import os
 import click
 import asyncio
-import sys
-import time
 from termcolor import colored
-from cognitive_agents import CognitiveAgent
+from .memory.pattern_store import PatternStore
+from .memory.pattern_network import PatternNetwork
+from .memory.pattern_semantics import PatternSemantics
+from .memory.theme_extraction import ThemeExtraction
+from .memory.question_evolution import QuestionEvolution
 
-def _calculate_timeout(thought: str, has_previous_patterns: bool) -> int:
-    """Calculate appropriate timeout based on thought complexity."""
-    base_timeout = 10  # Base timeout for simple thoughts
-    
-    # Add time for complexity factors
-    complexity_score = 0
-    
-    # Abstract concepts (words like "feel", "think", "sense", "intuition")
-    abstract_words = {"feel", "think", "sense", "intuit", "believe", "understand"}
-    if any(word in thought.lower() for word in abstract_words):
-        complexity_score += 2
-    
-    # Length complexity
-    if len(thought.split()) > 15:
-        complexity_score += 2
-    
-    # Previous pattern integration
-    if has_previous_patterns:
-        complexity_score += 3
-    
-    # Return adaptive timeout
-    return base_timeout + complexity_score
+@click.group()
+def cli():
+    """Natural Pattern Evolution System"""
+    pass
 
-@click.command()
-@click.option('--interactive', '-i', is_flag=True, 
-              help='Start interactive session')
-def cli(interactive):
-    """Process thoughts with cognitive agents."""
-    asyncio.run(main(interactive))
-
-async def main(interactive):
-    """Main async function."""
-    agent = CognitiveAgent("CLI Observer")
-    has_previous_patterns = False
-    
-    if interactive:
-        click.echo(colored("\n Welcome to Cognitive Agents", "cyan"))
-        click.echo("Share your thoughts, type 'exit' to quit\n")
-        
-        while True:
-            try:
-                thought = click.prompt('💭 Your thought')
-                if thought.lower() == 'exit':
-                    break
-                if not thought.strip():
-                    click.echo(colored("\n⚠️  Please share a thought", "yellow"))
-                    continue
-                    
-                # Calculate adaptive timeout
-                timeout = _calculate_timeout(thought, has_previous_patterns)
-                click.echo(colored(f"\nProcessing (timeout: {timeout}s)...", "cyan"))
+@cli.command()
+@click.argument('question')
+@click.option('--test', is_flag=True, help='Run in test mode')
+def evolve(question, test):
+    """Evolve a question naturally."""
+    async def run():
+        try:
+            if test:
+                # Use mock services
+                print(colored("\n🔄 Running in Test Mode", "yellow"))
+                result = {
+                    'pattern_id': 'test_pat_1',
+                    'themes': ['learning', 'patterns', 'evolution'],
+                    'connections': [
+                        {'metadata': {'content': 'How do patterns form?'}, 'score': 0.9}
+                    ]
+                }
+            else:
+                print(colored("\n🔄 Initializing Evolution System", "cyan"))
                 
-                try:
-                    # Initial processing
-                    result = await agent.process_thought(thought)
-                    has_previous_patterns = True  # Mark that we have patterns
-                    
-                    # Wait for integration with better feedback
-                    click.echo(colored("\n🔄 Integrating insights...", "cyan"))
-                    start_time = time.time()
-                    
-                    while not result.get('insights', {}).get('integrated_understanding'):
-                        if time.time() - start_time > timeout:
-                            raise TimeoutError(
-                                f"Integration exceeded {timeout}s timeout"
-                            )
-                        await asyncio.sleep(0.2)
-                        
-                        # Show integration status with timing
-                        elapsed = time.time() - start_time
-                        status = f"{'Connecting patterns' if result.get('patterns') else 'Processing'} ({elapsed:.1f}s/{timeout}s)"
-                        sys.stdout.write(f"\r{status}...")
-                        sys.stdout.flush()
-                    
-                    # Clear status line
-                    sys.stdout.write('\r' + ' ' * 50 + '\r')
-                    
-                    # Now access complete data
-                    insights = result['insights']
-                    understanding = insights['integrated_understanding']
-                    
-                    # Show complete analysis
-                    if understanding.get('patterns'):
-                        click.echo(colored("\n🔄 Patterns Found:", "yellow"))
-                        for pattern in understanding['patterns']:
-                            click.echo(f"  • {pattern}")
-                            
-                    if understanding.get('analysis'):
-                        click.echo(colored("\n💡 Understanding:", "green"))
-                        click.echo(f"  {understanding['analysis']}")
-                        
-                    if understanding.get('meta_cognition'):
-                        click.echo(colored("\n🤔 Meta Reflection:", "magenta"))
-                        click.echo(f"  {understanding['meta_cognition']}")
-                        
-                except TimeoutError:
-                    click.echo(colored("\n⚠️  Integration is taking longer than expected", "yellow"))
-                    click.echo("  Try a simpler thought or wait for system to complete")
-                except Exception as e:
-                    click.echo(colored(f"\n❌ Error: {str(e)}", "red"))
-                    
-            except KeyboardInterrupt:
-                click.echo(colored("\n\n👋 Goodbye!", "cyan"))
-                break
-            except Exception as e:
-                click.echo(colored(f"\n❌ Error: {str(e)}", "red"))
-    else:
-        # Single thought processing
-        thought = click.prompt('Share a thought')
-        result = await agent.process_thought(thought)
-        click.echo(result)
+                # Initialize components
+                store = PatternStore(os.getenv('MONGODB_URI'))
+                print(colored("✓ Pattern Store Ready", "green"))
+                
+                network = PatternNetwork(
+                    store=store,
+                    uri=os.getenv('NEO4J_URI'),
+                    user=os.getenv('NEO4J_USER'),
+                    password=os.getenv('NEO4J_PASSWORD')
+                )
+                print(colored("✓ Knowledge Network Ready", "green"))
+                
+                semantics = PatternSemantics(
+                    network=network,
+                    api_key=os.getenv('PINECONE_API_KEY')
+                )
+                print(colored("✓ Semantic Understanding Ready", "green"))
+                
+                theme_extractor = ThemeExtraction(store, network)
+                
+                # Create evolution system
+                evolution = QuestionEvolution(
+                    store=store,
+                    network=network,
+                    semantics=semantics,
+                    theme_extractor=theme_extractor
+                )
+                
+                # Evolve question
+                print(colored(f"\n🤔 Evolving Question: {question}", "cyan"))
+                result = await evolution.evolve_question(question)
+                
+                # Display results
+                print(colored("\n✨ Evolution Results:", "green"))
+                print(f"Pattern ID: {result['pattern_id']}")
+                print(f"Themes: {', '.join(result['themes'])}")
+                print("\nSimilar Patterns:")
+                for pattern in result['connections']:
+                    print(f"  • {pattern['metadata']['content']} ({pattern['score']:.2f})")
+                
+        except Exception as e:
+            print(colored(f"\n❌ Evolution Error: {str(e)}", "red"))
+            
+    asyncio.run(run())
 
 if __name__ == '__main__':
     cli() 

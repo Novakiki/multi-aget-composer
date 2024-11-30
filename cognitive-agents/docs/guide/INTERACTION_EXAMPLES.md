@@ -133,3 +133,67 @@ result = await evolution.evolve_question(question)
 1. Learning Systems
 2. Pattern Discovery
 3. Knowledge Evolution 
+
+# Evolution System Examples
+
+## 1. Basic Pattern Evolution
+```python
+# Initialize components
+store = PatternStore(mongodb_uri)
+network = PatternNetwork(store)
+semantics = PatternSemantics(network)
+theme_extractor = ThemeExtraction(store, network)
+
+# Create evolution system
+evolution = QuestionEvolution(store, network, semantics, theme_extractor)
+
+# Example: Question Evolution
+question = "How do patterns emerge naturally?"
+result = await evolution.evolve_question(question)
+
+print(f"Themes: {result['themes']}")
+print(f"Similar Patterns: {len(result['connections'])}")
+print(f"Insights Generated: {len(result['insights'])}")
+```
+
+## 2. Theme Discovery Flow
+```python
+# Extract themes from content
+content = "Learning happens through natural connections"
+themes = await theme_extractor.extract_themes(content)
+
+# Store pattern with themes
+pattern_id = await store.store_pattern({
+    'content': content,
+    'themes': themes
+})
+
+# Find similar patterns
+similar = await semantics.find_similar(pattern_id)
+```
+
+## 3. Complete Evolution Cycle
+```python
+async def evolve_understanding(question: str):
+    # 1. Extract themes
+    themes = await theme_extractor.extract_themes(question)
+    
+    # 2. Store pattern
+    pattern = {
+        'content': question,
+        'themes': themes
+    }
+    pattern_id = await store.store_pattern(pattern)
+    
+    # 3. Create connections
+    await network.connect_pattern(pattern_id, pattern)
+    
+    # 4. Find similar patterns
+    similar = await semantics.find_similar(pattern_id)
+    
+    return {
+        'pattern_id': pattern_id,
+        'themes': themes,
+        'similar': similar
+    }
+```

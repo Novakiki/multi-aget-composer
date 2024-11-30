@@ -8,30 +8,15 @@ logger = logging.getLogger(__name__)
 class PatternSemantics:
     """Semantic understanding for patterns."""
     
-    def __init__(self, network, api_key: str, environment: str = "gcp-starter"):
+    def __init__(self, network, api_key: str, environment: str = "us-central1"):
         self.network = network
-        # Don't create real Pinecone client in tests
-        if api_key == "test-key":
-            self.pc = None
-            self.index = None
-            return
-            
         try:
+            # Initialize with serverless index
             self.pc = Pinecone(api_key=api_key)
-            evolution_index = 'pattern-evolution'
-            if evolution_index not in self.pc.list_indexes().names():
-                self.pc.create_index(
-                    name=evolution_index,
-                    dimension=384,
-                    metric='cosine',
-                    spec=ServerlessSpec(
-                        cloud='gcp',
-                        region='asia-southeast1-gcp'
-                    )
-                )
-            self.index = self.pc.Index(evolution_index)
+            self.index = self.pc.Index('virtual-limit-interactions')  # Use existing index
+            print(colored("✓ Pinecone Serverless Connected", "green"))
         except Exception as e:
-            logger.error(colored(f"❌ Initialization error: {str(e)}", "red"))
+            logger.error(colored(f"❌ Pinecone Error: {str(e)}", "red"))
             raise
         
     async def understand_pattern(self, pattern_id: str, embedding: List[float]):
@@ -60,4 +45,25 @@ class PatternSemantics:
             
         except Exception as e:
             print(colored(f"❌ Semantic error: {str(e)}", "red"))
+            return [] 
+
+    async def find_similar(self, pattern_id: str) -> List[Dict]:
+        """Find semantically similar patterns."""
+        try:
+            # Get pattern
+            pattern = await self.network.store.get_pattern(pattern_id)
+            if not pattern:
+                return []
+                
+            # Query similar patterns
+            results = self.index.query(
+                vector=pattern.get('embedding', [0.1] * 384),  # Default embedding if none
+                top_k=5,
+                include_metadata=True
+            )
+            
+            return results.matches if results else []
+            
+        except Exception as e:
+            logger.error(colored(f"❌ Similarity search error: {str(e)}", "red"))
             return [] 

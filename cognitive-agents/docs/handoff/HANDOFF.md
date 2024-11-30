@@ -17,6 +17,11 @@
    - Theme extraction ✅
    - Natural evolution ✅
 
+5. Pattern Relationships
+   - Semantic relationships ✅
+   - Thematic relationships ✅
+   - Relationship strength ✅
+
 ## Running Tests
 ```bash
 # Individual Component Tests
@@ -25,6 +30,7 @@ pytest -v -s tests/memory/test_pattern_network.py    # Networks
 pytest -v -s tests/memory/test_pattern_semantics.py  # Semantics
 pytest -v -s tests/memory/test_theme_extraction.py   # Themes
 pytest -v -s tests/memory/test_question_evolution.py # Questions
+pytest -v -s tests/memory/test_pattern_relationships.py # Relationships
 
 # Full Evolution Suite
 pytest -v -s tests/memory/
