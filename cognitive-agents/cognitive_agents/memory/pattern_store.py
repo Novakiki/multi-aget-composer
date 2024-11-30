@@ -7,12 +7,13 @@ from .embeddings import EmbeddingGenerator
 class PatternStore:
     """Basic pattern storage and evolution tracking."""
     
-    def __init__(self, mongodb_uri: str = "mongodb://localhost:27017"):
+    def __init__(self, mongodb_uri: str = "mongodb://localhost:27017", semantics=None):
         """Initialize with MongoDB."""
         self.client = AsyncIOMotorClient(mongodb_uri)
         self.db = self.client.evolution
         self.patterns = self.db.patterns
         self.embeddings = EmbeddingGenerator()
+        self.semantics = semantics
         
     async def store_pattern(self, pattern: Dict) -> str:
         """Store pattern with real embeddings."""
@@ -36,11 +37,12 @@ class PatternStore:
             })
             
             # Also store in Pinecone for semantic search
-            await self.semantics.store_embedding(
-                pattern_id, 
-                embedding, 
-                {'content': pattern['content'], 'themes': pattern['themes']}
-            )
+            if self.semantics:
+                await self.semantics.store_embedding(
+                    pattern_id, 
+                    embedding, 
+                    {'content': pattern['content'], 'themes': pattern['themes']}
+                )
             
             print(colored(f"✨ Pattern {pattern_id} stored with embedding", "green"))
             return pattern_id

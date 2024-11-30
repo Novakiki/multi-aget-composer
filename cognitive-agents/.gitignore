@@ -51,3 +51,8 @@ data/
 
 # Pinecone
 pinecone_index/ 
+# Python cache
+__pycache__/
+*.py[cod]
+*.class
+.pytest_cache/
