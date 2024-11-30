@@ -50,16 +50,16 @@ class PatternSemantics:
     async def find_similar(self, pattern_id: str) -> List[Dict]:
         """Find semantically similar patterns."""
         try:
-            # Get pattern
             pattern = await self.network.store.get_pattern(pattern_id)
-            if not pattern:
+            if not pattern or 'embedding' not in pattern:
                 return []
                 
-            # Query similar patterns
+            # Query with actual embedding
             results = self.index.query(
-                vector=pattern.get('embedding', [0.1] * 384),  # Default embedding if none
+                vector=pattern['embedding'],
                 top_k=5,
-                include_metadata=True
+                include_metadata=True,
+                filter={'id': {'$ne': pattern_id}}  # Exclude self
             )
             
             return results.matches if results else []

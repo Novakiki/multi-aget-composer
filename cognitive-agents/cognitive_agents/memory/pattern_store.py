@@ -22,18 +22,26 @@ class PatternStore:
             # Generate real embedding
             embedding = self.embeddings.generate(pattern['content'])
             
+            # Store complete pattern
             await self.patterns.insert_one({
                 '_id': pattern_id,
                 'content': pattern['content'],
                 'themes': pattern['themes'],
-                'embedding': embedding,  # Real embedding
-                'evolution': {
-                    'stage': 'emerging',
-                    'history': [],
-                    'connections': []
-                },
-                'created_at': datetime.now()
+                'embedding': embedding,
+                'metadata': {
+                    'created_at': datetime.now(),
+                    'type': 'question',
+                    'version': '1.0'
+                }
             })
+            
+            # Also store in Pinecone for semantic search
+            await self.semantics.store_embedding(
+                pattern_id, 
+                embedding, 
+                {'content': pattern['content'], 'themes': pattern['themes']}
+            )
+            
             print(colored(f"✨ Pattern {pattern_id} stored with embedding", "green"))
             return pattern_id
             

@@ -57,9 +57,15 @@ def evolve(question):
             print(colored("\n✨ Evolution Results:", "green"))
             print(f"Pattern ID: {result['pattern_id']}")
             print(f"Themes: {', '.join(result['themes'])}")
+
             print("\nSimilar Patterns:")
-            for pattern in result['connections']:
-                print(f"  • {pattern['metadata']['content']} ({pattern['score']:.2f})")
+            if result['connections']:
+                for pattern in result['connections']:
+                    print(f"  • {pattern['content']} (similarity: {pattern['similarity']:.2f})")
+                    if pattern['themes']:
+                        print(f"    Themes: {', '.join(pattern['themes'])}")
+            else:
+                print(colored("  No similar patterns found yet - this is a new direction!", "yellow"))
                 
         except Exception as e:
             print(colored(f"\n❌ Evolution Error: {str(e)}", "red"))

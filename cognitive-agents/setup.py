@@ -20,6 +20,16 @@ setup(
         'pytest-mock',
         'watchdog'
     ],
+    extras_require={
+        'test': [
+            'pytest>=8.3.3',
+            'pytest-asyncio>=0.24.0',
+            'pytest-mock>=3.14.0'
+        ],
+        'advanced': [
+            'sentence-transformers>=2.2.0'
+        ]
+    },
     entry_points={
         'console_scripts': [
             'evolve=cognitive_agents.cli:cli'

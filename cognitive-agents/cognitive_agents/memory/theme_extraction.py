@@ -7,24 +7,22 @@ class ThemeExtraction:
     def __init__(self, store, network):
         self.store = store
         self.network = network
+        self.core_themes = {
+            'patterns': ['pattern', 'form', 'structure', 'emerge'],
+            'nature': ['nature', 'natural', 'organic', 'environment'],
+            'evolution': ['evolution', 'develop', 'grow', 'change'],
+            'learning': ['learn', 'understand', 'comprehend', 'grasp']
+        }
         
     async def extract_themes(self, content: str) -> List[str]:
-        """Extract themes naturally from content."""
-        print(colored(f"\n🎯 Extracting Themes:", "cyan"))
+        """Extract themes using core concepts."""
+        content = content.lower()
+        themes = set()
         
-        # Start with basic themes
-        base_themes = ['learning', 'evolution']
-        
-        # Find related patterns
-        patterns = await self.store.find_patterns_by_content(content)
-        
-        # Extract themes from related patterns
-        for pattern in patterns:
-            if 'themes' in pattern:
-                base_themes.extend(pattern['themes'])
+        # Match core themes
+        for theme, keywords in self.core_themes.items():
+            if any(word in content for word in keywords):
+                themes.add(theme)
                 
-        # Remove duplicates while preserving order
-        unique_themes = list(dict.fromkeys(base_themes))
-        
-        print(f"Found Themes: {', '.join(unique_themes)}")
-        return unique_themes 
+        print(colored(f"Found Themes: {', '.join(themes)}", "cyan"))
+        return list(themes) 

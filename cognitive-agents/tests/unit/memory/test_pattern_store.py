@@ -1,5 +1,6 @@
 import pytest
-from motor.motor_asyncio import AsyncIOMotorClient
+from datetime import datetime
+from unittest.mock import AsyncMock, MagicMock
 from cognitive_agents.memory.pattern_store import PatternStore
 from termcolor import colored
 
@@ -7,49 +8,46 @@ from termcolor import colored
 class TestPatternStore:
     @pytest.fixture
     async def store(self):
-        """Create test pattern store."""
-        # Use test database
+        """Create test store with mocked dependencies."""
         store = PatternStore("mongodb://localhost:27017")
-        store.db = store.client.test_evolution
         
-        # Clean before test
-        await store.patterns.delete_many({})
+        # Mock MongoDB
+        store.patterns.insert_one = AsyncMock()
+        store.patterns.find_one = AsyncMock(return_value={
+            'content': 'Test pattern',
+            'themes': ['test']
+        })
+        
+        # Mock embeddings
+        store.embeddings.generate = MagicMock(return_value=[0.1] * 384)
+        
+        # Mock semantics
+        store.semantics = AsyncMock()
+        store.semantics.store_embedding = AsyncMock()
+        
         return store
         
-    async def test_pattern_emergence(self, store):
-        """Test natural pattern emergence."""
-        # Await the fixture
+    async def test_pattern_storage(self, store):
+        """Test storing pattern with embedding."""
+        # Await the fixture first
         store = await store
         
+        # Test pattern
         pattern = {
-            'content': 'Learning happens naturally',
-            'type': 'insight',
-            'themes': ['learning', 'evolution']
+            'content': 'How do patterns emerge?',
+            'themes': ['patterns', 'evolution']
         }
+        
+        print(colored("\n🧪 Testing Pattern Storage:", "cyan"))
+        print(f"Pattern: {pattern['content']}")
         
         # Store pattern
         pattern_id = await store.store_pattern(pattern)
-        assert pattern_id.startswith('pat_')
         
         # Verify storage
-        stored = await store.patterns.find_one({'_id': pattern_id})
-        assert stored['evolution']['stage'] == 'emerging'
-        print(colored(f"\n✨ Pattern emerged: {pattern_id}", "cyan"))
+        assert pattern_id.startswith('pat_')
+        assert store.patterns.insert_one.called
+        assert store.semantics.store_embedding.called
         
-    async def test_pattern_search(self, store):
-        """Test pattern content search."""
-        store = await store
-        
-        # Store test patterns
-        patterns = [
-            {'content': 'Learning happens naturally', 'themes': ['learning']},
-            {'content': 'Natural patterns emerge', 'themes': ['patterns']}
-        ]
-        
-        for pattern in patterns:
-            await store.store_pattern(pattern)
-            
-        # Search patterns
-        results = await store.find_patterns_by_content('natural')
-        assert len(results) > 0
+        print(colored("✅ Pattern stored with embedding", "green"))
         

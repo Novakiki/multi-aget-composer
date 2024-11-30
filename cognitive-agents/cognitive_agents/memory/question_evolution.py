@@ -13,26 +13,36 @@ class QuestionEvolution:
     async def evolve_question(self, question: str) -> Dict:
         """Let a question evolve naturally."""
         try:
-            # Remove this line - CLI handles initial messaging
-            # print(colored(f"\n🤔 Evolving Question: {question}", "cyan"))
-            
             # Extract themes
             themes = await self.theme_extractor.extract_themes(question)
             
-            # Store pattern
+            # Store pattern with embedding
             pattern = {
                 'content': question,
                 'themes': themes
             }
             pattern_id = await self.store.store_pattern(pattern)
             
-            # Find similar patterns
+            # Find similar patterns with semantic search
             similar = await self.semantics.find_similar(pattern_id)
+            
+            # Create meaningful connections
+            connections = []
+            for match in similar:
+                try:
+                    connections.append({
+                        'content': match['metadata']['content'],
+                        'similarity': match['score'],
+                        'themes': match['metadata'].get('themes', [])
+                    })
+                except KeyError as e:
+                    print(colored(f"Warning: Malformed pattern data - {e}", "yellow"))
+                    continue
             
             return {
                 'pattern_id': pattern_id,
                 'themes': themes,
-                'connections': similar
+                'connections': connections
             }
         except Exception as e:
             print(f"Error evolving question: {e}")
