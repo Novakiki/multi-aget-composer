@@ -29,12 +29,12 @@ export interface Insight {
     id: string;
     content: string;
     patterns: string[];
-    timestamp: Date;
+    timestamp: string;
 }
 
 export interface EvolutionStep {
     stage: string;
-    timestamp: Date;
+    timestamp: string;
     changes: Change[];
 }
 
