@@ -1,6 +1,0 @@
-{
-    "python.defaultInterpreterPath": "/Users/amygrant/miniconda3/envs/evolution/bin/python",
-    "python.analysis.extraPaths": [
-        "./cognitive_agents"
-    ]
-} 

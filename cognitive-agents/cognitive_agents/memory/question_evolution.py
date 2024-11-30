@@ -12,31 +12,31 @@ class QuestionEvolution:
         
     async def evolve_question(self, question: str) -> Dict:
         """Let a question evolve naturally."""
-        print(colored(f"\n🤔 Evolving Question: {question}", "cyan"))
-        
-        # 1. Extract themes
-        themes = await self.theme_extractor.extract_themes(question)
-        
-        # 2. Store as pattern with themes
-        pattern = {
-            'type': 'question',
-            'content': question,
-            'themes': themes
-        }
-        pattern_id = await self.store.store_pattern(pattern)
-        
-        # 3. Find semantic connections
-        similar = await self.semantics.find_similar(pattern_id)
-        
-        # 4. Generate insights
-        insights = await self._generate_insights(question, similar)
-        
-        return {
-            'pattern_id': pattern_id,
-            'themes': themes,
-            'insights': insights,
-            'connections': similar
-        }
+        try:
+            # Remove this line - CLI handles initial messaging
+            # print(colored(f"\n🤔 Evolving Question: {question}", "cyan"))
+            
+            # Extract themes
+            themes = await self.theme_extractor.extract_themes(question)
+            
+            # Store pattern
+            pattern = {
+                'content': question,
+                'themes': themes
+            }
+            pattern_id = await self.store.store_pattern(pattern)
+            
+            # Find similar patterns
+            similar = await self.semantics.find_similar(pattern_id)
+            
+            return {
+                'pattern_id': pattern_id,
+                'themes': themes,
+                'connections': similar
+            }
+        except Exception as e:
+            print(f"Error evolving question: {e}")
+            return None
         
     async def _generate_insights(self, question: str, similar: List[Dict]) -> List[Dict]:
         """Generate insights from similar patterns."""

@@ -1,2 +1,0 @@
-[console_scripts]
-evolve = cognitive_agents.cli:cli
