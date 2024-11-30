@@ -56,3 +56,8 @@ __pycache__/
 *.py[cod]
 *.class
 .pytest_cache/
+
+# Test artifacts
+.pytest_cache/
+tests/**/__pycache__/
+*.pyc

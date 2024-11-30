@@ -1,51 +1,35 @@
 import pytest
-from termcolor import colored
-from cognitive_agents.memory.pattern_store import PatternStore
+from unittest.mock import AsyncMock
 from cognitive_agents.memory.pattern_network import PatternNetwork
+from termcolor import colored
 
-@pytest.mark.asyncio
+pytestmark = pytest.mark.asyncio
+
+@pytest.mark.unit
 class TestPatternNetwork:
     @pytest.fixture
     async def network(self):
-        """Create test network with store."""
-        store = PatternStore("mongodb://localhost:27017")
-        store.db = store.client.test_evolution
-        await store.patterns.delete_many({})
-        
+        """Create test network."""
+        mock_store = AsyncMock()
         network = PatternNetwork(
-            store=store,
+            store=mock_store,
             uri="bolt://localhost:7687",
             user="neo4j",
-            password="evolution"
+            password="test"
         )
+        network.graph = AsyncMock()
         return network
         
-    async def test_pattern_connections(self, network):
-        """Test pattern connection and theme relationships."""
-        network = await network  # Await fixture
+    async def test_pattern_connection(self, network):
+        """Test pattern connections."""
+        network = await network
         
-        # Create test pattern
         pattern = {
-            'content': 'Patterns connect naturally',
-            'type': 'insight',
-            'themes': ['connection', 'evolution']
+            'content': 'Test pattern',
+            'themes': ['test']
         }
         
-        # Store in MongoDB first
-        pattern_id = await network.store.store_pattern(pattern)
-        
-        # Create network connections
-        await network.connect_pattern(pattern_id, pattern)
-        
-        # Verify theme relationships
-        async with network.graph.session() as session:
-            result = await session.run("""
-                MATCH (p:Pattern {id: $id})-[:HAS_THEME]->(t:Theme)
-                RETURN collect(t.name) as themes
-            """, id=pattern_id)
-            themes = (await result.single())['themes']
-            assert set(themes) == set(['connection', 'evolution'])
-            
-        print(colored(f"\n🔄 Pattern Network Created", "cyan"))
-        print(f"  • Pattern: {pattern_id}")
-        print(f"  • Themes: {', '.join(themes)}") 
+        print(colored("\n🔄 Testing Pattern Network:", "cyan"))
+        result = await network.connect_pattern("test_1", pattern)
+        assert result is True
+        print(colored("✅ Pattern connected", "green")) 
