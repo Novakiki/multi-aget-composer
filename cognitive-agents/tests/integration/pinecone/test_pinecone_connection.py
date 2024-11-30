@@ -3,6 +3,7 @@ import pytest
 from pinecone import Pinecone
 
 @pytest.mark.integration
+@pytest.mark.pinecone
 def test_pinecone_connection():
     """Test basic Pinecone connection."""
     try:

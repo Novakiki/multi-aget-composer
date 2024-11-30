@@ -5,15 +5,42 @@ from cognitive_agents.memory.intentional_memory import IntentionalMemory
 from cognitive_agents.memory.question_evolution import QuestionEvolution
 from cognitive_agents.community.community_learning import CommunityLearning
 from cognitive_agents.integration.meta_integration import MetaIntegration
+from cognitive_agents.memory.pattern_network import PatternNetwork
+from cognitive_agents.memory.pattern_semantics import PatternSemantics
+from cognitive_agents.memory.pattern_store import PatternStore
+from cognitive_agents.memory.theme_extraction import ThemeExtraction
+import os
 
-@pytest.mark.asyncio
+@pytest.mark.integration
 class TestMetaIntegration:
     @pytest.fixture
     async def integration(self):
         """Create and return integration."""
+        # Create dependencies
+        store = PatternStore("mongodb://localhost:27017")
+        network = PatternNetwork(
+            store=store,
+            uri="bolt://localhost:7687",
+            user="neo4j",
+            password="evolution"
+        )
+        semantics = PatternSemantics(
+            network=network,
+            api_key=os.getenv('PINECONE_API_KEY')
+        )
+        theme_extractor = ThemeExtraction(store, network)
+        
+        # Create QuestionEvolution with dependencies
+        questions = QuestionEvolution(
+            store=store,
+            network=network,
+            semantics=semantics,
+            theme_extractor=theme_extractor
+        )
+        
         return MetaIntegration(
             memory=IntentionalMemory(),
-            questions=QuestionEvolution(),
+            questions=questions,
             community=CommunityLearning()
         )
         

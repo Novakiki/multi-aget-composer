@@ -2,6 +2,8 @@ import pytest
 import os
 from cognitive_agents.memory.pattern_semantics import PatternSemantics
 from termcolor import colored
+from cognitive_agents.memory.pattern_network import PatternNetwork
+from unittest.mock import AsyncMock
 
 pytestmark = pytest.mark.integration
 
@@ -10,9 +12,22 @@ class TestPatternSemanticsIntegration:
     @pytest.fixture
     async def live_semantics(self):
         """Create live semantic system."""
-        # Test just Pinecone, no Neo4j dependency
+        # Create mock store for network
+        mock_store = AsyncMock()
+        mock_store.get_pattern.return_value = {
+            'content': 'Test pattern',
+            'themes': ['test']
+        }
+        
+        network = PatternNetwork(
+            store=mock_store,  # Add mock store
+            uri="bolt://localhost:7687",
+            user="neo4j",
+            password="evolution"
+        )
+        
         semantics = PatternSemantics(
-            network=None,  # Don't need network for Pinecone test
+            network=network,  # Pass network with store
             api_key=os.getenv('PINECONE_API_KEY')
         )
         return semantics

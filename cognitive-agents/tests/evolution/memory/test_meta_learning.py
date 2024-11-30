@@ -2,6 +2,11 @@ import pytest
 from termcolor import colored
 from cognitive_agents.memory.meta_learning import MetaLearning
 
+pytestmark = [
+    pytest.mark.asyncio(loop_scope="function"),
+    pytest.mark.evolution
+]
+
 @pytest.mark.asyncio
 class TestMetaLearning:
     @pytest.fixture

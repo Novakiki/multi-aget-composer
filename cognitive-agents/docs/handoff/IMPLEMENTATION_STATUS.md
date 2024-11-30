@@ -35,6 +35,14 @@ assert len(result['natural_connections']) > 0
 1. Evolution paths
 2. Community formation
 3. Deep resonance
+4. Error handling scenarios
+5. Edge cases
+6. Performance benchmarks
+
+## Known Issues
+- High memory usage during large pattern processing
+- Occasional slow response in semantic search
+- Need optimization for large graph traversals
 
 ## Implementation Notes
 - Pattern recognition is natural

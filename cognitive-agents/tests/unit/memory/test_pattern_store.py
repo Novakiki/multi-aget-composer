@@ -3,9 +3,11 @@ from unittest.mock import AsyncMock
 from cognitive_agents.memory.pattern_store import PatternStore
 from termcolor import colored
 
-pytestmark = pytest.mark.asyncio  # Mark all tests as async
+pytestmark = [
+    pytest.mark.asyncio,  # Mark all tests as async
+    pytest.mark.unit      # Mark all tests as unit tests
+]
 
-@pytest.mark.unit
 class TestPatternStore:
     @pytest.fixture
     async def store(self):
